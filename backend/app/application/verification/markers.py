@@ -1,19 +1,25 @@
 import re
+import unicodedata
 from dataclasses import dataclass
+from typing import Any
 
 from app.application.bible.passages import PassageService
+from app.application.chat.events import passage_payload
 from app.domain.bible.books import BOOKS
-from app.domain.bible.entities import ResolvedPassage
+from app.domain.bible.entities import Person, Place, ResolvedPassage
 from app.domain.bible.errors import InvalidReference
-from app.domain.bible.references import format_reference
+from app.domain.bible.references import VerseRange, format_reference
 
 MARKER_RE = re.compile(r"\[\[([^\[\]|]{1,60})(?:\|([A-Za-z0-9]{2,10}))?\]\]")
-VISUAL_RE = re.compile(r"\[\[(linha|mapa|quiasmo):([^\[\]]{1,900})\]\]")
+VISUAL_RE = re.compile(r"\[\[(linha|mapa|quiasmo|rota|fio):([^\[\]]{1,900})\]\]")
 SECTION_RE = re.compile(r"^\s*(\d{1,3})\s*[-–]\s*(\d{1,3})\s*=\s*(.{1,80}?)\s*$")
 CHIASM_PART_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*=\s*(.{1,80}?)\s*$")
 MAX_HELD = 80
 MAX_HELD_VISUAL = 950
-VISUAL_PREFIXES = ("[[linha:", "[[mapa:", "[[quiasmo:")
+VISUAL_PREFIXES = ("[[linha:", "[[mapa:", "[[quiasmo:", "[[rota:", "[[fio:")
+DIRECTIONS = {"oriente", "ocidente", "norte", "sul", "leste", "oeste"}
+MAX_LINKS = 6
+MIN_KEY_CHARS = 40
 
 
 @dataclass(frozen=True)
@@ -55,7 +61,45 @@ class ChiasmOut:
     parts: list[dict[str, object]]
 
 
-StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut | ChiasmOut
+@dataclass(frozen=True)
+class RouteOut:
+    marker: str
+    reference: str
+    legs: list[dict[str, Any]]
+
+
+@dataclass(frozen=True)
+class ThreadOut:
+    marker: str
+    reference: str
+    links: list[dict[str, Any]]
+    books: list[dict[str, Any]]
+
+
+StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut | ChiasmOut | RouteOut | ThreadOut
+
+
+def _places_between(places: list[Place], start: int, end: int) -> list[dict[str, object]]:
+    found = [
+        (min(v for v in p.verses if start <= v <= end), p) for p in places if any(start <= v <= end for v in p.verses)
+    ]
+    found.sort(key=lambda t: t[0])
+    return [{"name": p.name, "kind": p.kind, "lon": p.lon, "lat": p.lat} for _, p in found]
+
+
+def _people_between(people: list[Person], chapter: int, start: int, end: int) -> list[dict[str, object]]:
+    found = [
+        (min(v for c, v in p.verses if c == chapter and start <= v <= end), p)
+        for p in people
+        if any(c == chapter and start <= v <= end for c, v in p.verses)
+    ]
+    found.sort(key=lambda t: t[0])
+    return [{"name": p.name, "pt": p.name_is_pt} for _, p in found]
+
+
+def _key(name: str) -> str:
+    decomposed = unicodedata.normalize("NFKD", name.lower().strip())
+    return "".join(c for c in decomposed if not unicodedata.combining(c))
 
 
 def mirrored_label(index: int, count: int) -> str:
@@ -88,7 +132,21 @@ class MarkerStreamProcessor:
         if not sections:
             return InvalidRefOut(marker)
         reference = format_reference(chapter)
+        await self._enrich(chapter, sections)
         return TimelineOut(marker, reference, BOOKS[chapter.book_id - 1].pt_name, sections)
+
+    async def _enrich(self, chapter: VerseRange, sections: list[dict[str, object]]) -> None:
+        """Cada cena ganha quem aparece, onde acontece e um versículo dela, tudo do banco."""
+        places = await self._passages.places(chapter)
+        people = await self._passages.people(chapter)
+        for section in sections:
+            start, end = int(str(section["start"])), int(str(section["end"]))
+            section["places"] = _places_between(places, start, end)
+            section["people"] = _people_between(people, chapter.chapter, start, end)
+            passage = await self._passages.resolve(f"{format_reference(chapter)}:{start}-{end}")
+            longish = [v for v in passage.verses if len(v.text) >= MIN_KEY_CHARS] or passage.verses
+            key = min(longish, key=lambda v: len(v.text))
+            section["key"] = {"n": key.verse, "text": key.text, "translation": passage.translation}
 
     async def _chiasm(self, marker: str, body: str) -> StreamOut | None:
         """Estrutura em espelho (A B C B' A'): partes em ordem, sem sobreposição, dentro do capítulo."""
@@ -112,6 +170,61 @@ class MarkerStreamProcessor:
         ]
         return ChiasmOut(marker, format_reference(chapter), BOOKS[chapter.book_id - 1].pt_name, items)
 
+    async def _route(self, marker: str, body: str) -> StreamOut | None:
+        """Viagem em trechos (A>B>C=quem); toda parada precisa ser um lugar citado no capítulo."""
+        ref, _, raw_legs = body.partition("|")
+        chapter, _ = await self._passages.chapter(ref.strip())
+        known = {_key(p.name): p for p in await self._passages.places(chapter)}
+        legs: list[dict[str, Any]] = []
+        for raw in raw_legs.split(";")[:6]:
+            path, _, who = raw.partition("=")
+            names = [n for n in (part.strip() for part in path.split(">")) if n]
+            if len(names) < 2 or any(_key(n) not in known for n in names):
+                continue
+            stops = []
+            for n in names:
+                p = known[_key(n)]
+                region = p.kind == "region"
+                stops.append(
+                    {
+                        "name": p.name,
+                        "kind": p.kind,
+                        "lon": p.lon,
+                        "lat": p.lat,
+                        "verses": p.verses,
+                        "region": region,
+                        "direction": region and _key(p.name) in DIRECTIONS,
+                    }
+                )
+            legs.append({"who": who.strip()[:60] or None, "stops": stops})
+        if not legs:
+            return InvalidRefOut(marker)
+        return RouteOut(marker, format_reference(chapter), legs)
+
+    async def _thread(self, marker: str, body: str) -> StreamOut | None:
+        """Arcos do capítulo até o outro Testamento (referências cruzadas mais votadas); sem ligação, nada."""
+        chapter, _ = await self._passages.chapter(body.strip())
+        links: list[dict[str, Any]] = []
+        for from_verse, target, votes in await self._passages.links(chapter, MAX_LINKS):
+            try:
+                source = await self._passages.resolve(f"{format_reference(chapter)}:{from_verse}")
+                passage = await self._passages.resolve(format_reference(target))
+            except InvalidReference:
+                continue
+            links.append(
+                {
+                    "from_verse": from_verse,
+                    "from_text": source.verses[0].text,
+                    "votes": votes,
+                    "target": passage_payload(passage),
+                }
+            )
+        if not links:
+            return None
+        sizes = await self._passages.book_sizes()
+        books = [{"id": b.id, "abbrev": b.abbrev, "verses": sizes.get(b.id, 0)} for b in BOOKS]
+        return ThreadOut(marker, format_reference(chapter), links, books)
+
     async def _map(self, marker: str, body: str) -> StreamOut | None:
         chapter, _ = await self._passages.chapter(body.strip())
         places = await self._passages.places(chapter)
@@ -126,7 +239,13 @@ class MarkerStreamProcessor:
         visual = VISUAL_RE.fullmatch(marker)
         if visual is not None:
             try:
-                handler = {"linha": self._timeline, "mapa": self._map, "quiasmo": self._chiasm}[visual.group(1)]
+                handler = {
+                    "linha": self._timeline,
+                    "mapa": self._map,
+                    "quiasmo": self._chiasm,
+                    "rota": self._route,
+                    "fio": self._thread,
+                }[visual.group(1)]
                 return await handler(marker, visual.group(2))
             except InvalidReference:
                 return InvalidRefOut(marker)

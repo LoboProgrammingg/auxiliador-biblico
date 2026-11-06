@@ -23,7 +23,8 @@ export type IssueKind =
   | "interpretacao_contradiz"
   | "teologia_prosperidade"
   | "teologia_investimento"
-  | "teologia_condenacao";
+  | "teologia_condenacao"
+  | "fato_nao_confere";
 
 export interface TimelineSection {
   start: number;
@@ -53,7 +54,7 @@ export type Segment =
   | { type: "chiasm"; marker: string; reference: string; book: string; parts: ChiasmPart[] }
   | { type: "verse"; marker: string; passage: Passage }
   | { type: "invalid_reference"; marker: string }
-  | { type: "issue"; kind: IssueKind; excerpt: string; marker?: string }
+  | { type: "issue"; kind: IssueKind; excerpt: string; marker?: string; correction?: string }
   | { type: "crisis"; numero: string; url: string }
   | { type: "memory"; topic: string }
   | { type: "error"; code: string; message: string };
@@ -69,7 +70,7 @@ export type ChatEvent =
   | { event: "memory_saved"; data: { topic: string } }
   | { event: "crisis"; data: { numero: string; url: string } }
   | { event: "triage"; data: { moment: string; distress: number } }
-  | { event: "issues"; data: { items: { kind: IssueKind; excerpt: string; marker?: string }[] } }
+  | { event: "issues"; data: { items: { kind: IssueKind; excerpt: string; marker?: string; correction?: string }[] } }
   | { event: "done"; data: { message_id: number } }
   | { event: "error"; data: { code: string; message: string } };
 

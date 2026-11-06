@@ -96,3 +96,10 @@ async def test_illustration_routes_validate_and_404(api: httpx.AsyncClient) -> N
     assert (await api.get("/api/v1/bible/route", params={"ref": "Mt 2", "fim": 3})).status_code == 404
     assert (await api.get("/api/v1/bible/word-profile", params={"strong": "X1"})).status_code == 422
     assert (await api.get("/api/v1/bible/word-profile", params={"strong": "G3309"})).status_code == 404
+
+
+async def test_geography_route_validates_frame(api: httpx.AsyncClient) -> None:  # type: ignore[name-defined]
+    ok = await api.get("/api/v1/bible/geography", params={"w": 34, "s": 31, "e": 36, "n": 33})
+    assert ok.status_code == 200 and ok.json()["source"].startswith("Natural Earth")
+    assert (await api.get("/api/v1/bible/geography", params={"w": 36, "s": 31, "e": 34, "n": 33})).status_code == 422
+    assert (await api.get("/api/v1/bible/geography", params={"w": -100, "s": 0, "e": 100, "n": 10})).status_code == 422

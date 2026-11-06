@@ -60,10 +60,59 @@ body {
   margin-bottom: 0.55em;
   background: var(--color-ouro);
 }
-.resposta h3 { font-size: 1.15rem; }
-.resposta p { margin: 0.6em 0; max-width: 70ch; }
+/* Coluna única de leitura: texto, cartões e ilustrações alinhados pela mesma borda. */
+.resposta > *,
+.resposta figure,
+.resposta aside { max-width: none; }
+.resposta h3 {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-ouro);
+  margin: 1.8em 0 0.4em;
+  display: flex;
+  align-items: center;
+  gap: 0.55em;
+}
+.resposta h3::before {
+  content: "";
+  width: 0.45em;
+  height: 0.45em;
+  transform: rotate(45deg);
+  border: 1.5px solid var(--color-ouro);
+  flex-shrink: 0;
+}
+.resposta h3::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-borda), transparent);
+}
+.resposta p { margin: 0.75em 0; }
 .resposta ul,
-.resposta ol { margin: 0.6em 0 0.6em 1.4em; max-width: 68ch; }
+.resposta ol { margin: 0.75em 0 0.75em 1.4em; }
+.resposta :not(figure) > blockquote {
+  margin: 1.4em 0;
+  padding: 0.9em 1.2em;
+  border: 1px solid var(--color-borda);
+  border-left: 3px solid var(--color-vinho);
+  border-radius: 0 0.6rem 0.6rem 0;
+  background: rgba(250, 246, 234, 0.85);
+  box-shadow: 0 10px 26px -24px rgba(74, 53, 36, 0.7);
+}
+.resposta :not(figure) > blockquote > :first-child { margin-top: 0; }
+.resposta :not(figure) > blockquote > :last-child { margin-bottom: 0; }
+.resposta :not(figure) > blockquote > p:first-child > strong:first-child {
+  display: block;
+  margin-bottom: 0.3em;
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--color-vinho);
+}
 .resposta ul { list-style: disc; }
 .resposta ol { list-style: decimal; }
 .resposta li { margin: 0.25em 0; }

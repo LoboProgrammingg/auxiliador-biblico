@@ -8,7 +8,7 @@ export function VerseCard({ passage }: { passage: Passage }) {
   const openPopup = useChat((s) => s.openPopup);
   const cited = passage.verses.filter((v) => v.cited);
   return (
-    <figure className="relative my-6 max-w-[68ch] rounded-r-lg border-l-[3px] border-ouro bg-gradient-to-br from-pergaminho-claro to-[#f6edd6] py-4 pr-5 pl-7 shadow-[0_1px_0_#e7dcc3,0_14px_30px_-24px_rgba(74,53,36,0.6)]">
+    <figure className="relative my-6 rounded-r-lg border-l-[3px] border-ouro bg-gradient-to-br from-pergaminho-claro to-[#f6edd6] py-4 pr-5 pl-7 shadow-[0_1px_0_#e7dcc3,0_14px_30px_-24px_rgba(74,53,36,0.6)]">
       <span aria-hidden className="pointer-events-none absolute top-0 left-2 font-escritura text-5xl leading-none text-ouro/35">“</span>
       <blockquote className="font-escritura text-[1.18rem] leading-[1.8] text-tinta">
         {cited.map((v) => (

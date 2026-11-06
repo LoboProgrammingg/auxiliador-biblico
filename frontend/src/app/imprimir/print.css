@@ -264,8 +264,11 @@ html:has(.impressao) body {
   margin-bottom: 2mm;
 }
 .resposta-impressa h4 {
-  font-size: 12pt;
-  margin: 5mm 0 2mm;
+  font-size: 9pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ouro);
+  margin: 5mm 0 1.5mm;
 }
 .resposta-impressa ul,
 .resposta-impressa ol {
@@ -273,6 +276,26 @@ html:has(.impressao) body {
 }
 .resposta-impressa hr {
   display: none;
+}
+.resposta-impressa > blockquote {
+  margin: 5mm 0;
+  padding: 3mm 5mm;
+  border-left: 1.6pt solid var(--vinho);
+  background: #fbf6ea;
+  break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.resposta-impressa > blockquote p {
+  text-align: left;
+  margin: 1mm 0;
+}
+.resposta-impressa > blockquote > p:first-child > strong:first-child {
+  display: block;
+  font-size: 8.5pt;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--vinho);
 }
 .ref {
   color: var(--couro);

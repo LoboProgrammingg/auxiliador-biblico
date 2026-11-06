@@ -277,3 +277,15 @@ class PersonVerseModel(Base):
     book_id: Mapped[int] = mapped_column(SmallInteger)
     chapter: Mapped[int] = mapped_column(Integer)
     verse: Mapped[int] = mapped_column(Integer)
+
+
+class GeoFeatureModel(Base):
+    __tablename__ = "geo_features"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    kind: Mapped[str] = mapped_column(String(12))
+    name: Mapped[str | None] = mapped_column(String(120))
+    points: Mapped[Any] = mapped_column(JSONB)
+    min_lon: Mapped[float] = mapped_column()
+    min_lat: Mapped[float] = mapped_column()
+    max_lon: Mapped[float] = mapped_column()
+    max_lat: Mapped[float] = mapped_column()

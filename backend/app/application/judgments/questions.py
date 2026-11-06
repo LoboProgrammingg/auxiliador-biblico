@@ -64,3 +64,38 @@ SENSITIVE = {
         "ou chave Pix?"
     )
 }
+
+FACT = {
+    "tipo": ChoiceQ(
+        "Que tipo de afirmação conferível a `frase` (escrita por um assistente bíblico) faz?",
+        {
+            "parentesco": "afirma o parentesco entre duas pessoas bíblicas (pai, mãe, avô, avó, bisavô, bisavó, filho, "
+            "filha, neto, neta, bisneto, marido, esposa)",
+            "ocorrencias": "afirma quantas vezes ou em quantos lugares uma palavra hebraica ou grega aparece "
+            "na Bíblia, "
+            "inclusive que ela só aparece ali",
+            "outra": "nenhuma das anteriores (opinião, interpretação, aplicação, história, outro fato)",
+        },
+    ),
+    "parentesco": ChoiceQ(
+        "Segundo a `frase`, o que `pessoa_a` é de `pessoa_b`?",
+        {
+            "pai_ou_mae": "pai ou mãe",
+            "avo": "avô ou avó",
+            "bisavo": "bisavô ou bisavó",
+            "filho": "filho ou filha",
+            "neto": "neto ou neta",
+            "bisneto": "bisneto ou bisneta",
+            "conjuge": "marido ou esposa",
+            "nenhum": "a frase não afirma parentesco entre as duas",
+        },
+    ),
+    "ocorrencias": ChoiceQ(
+        "Sobre a palavra do original citada na `frase`, o que ela afirma?",
+        {
+            "unica": "que a palavra aparece uma única vez, só naquele lugar",
+            "numero": "um número exato de vezes ou de lugares em que a palavra aparece",
+            "nao_afirma": "não afirma quantidade",
+        },
+    ),
+}

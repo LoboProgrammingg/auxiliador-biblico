@@ -64,3 +64,20 @@ class BibleRepository(ABC):
 
     @abstractmethod
     async def strong_by_book(self, strong: str) -> list[tuple[int, int]]: ...
+
+    @abstractmethod
+    async def geo_features(
+        self, west: float, south: float, east: float, north: float
+    ) -> list[tuple[str, str | None, list[list[float]]]]: ...
+
+    @abstractmethod
+    async def chapter_links(self, book_id: int, chapter: int, limit: int) -> list[tuple[int, VerseRange, int]]: ...
+
+    @abstractmethod
+    async def people_named(self, names: list[str]) -> list[tuple[str, str]]: ...
+
+    @abstractmethod
+    async def strong_stats(self, strong: str) -> tuple[int, int, list[int]]: ...
+
+    @abstractmethod
+    async def person_names(self, ids: list[str]) -> dict[str, str]: ...

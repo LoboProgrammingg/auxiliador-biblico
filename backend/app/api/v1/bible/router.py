@@ -14,6 +14,7 @@ from app.api.v1.bible.schemas import (
     VerseOut,
     WordOut,
 )
+from app.application.bible.geography import BBox, geography_for
 from app.application.bible.illustrations import genealogy, route, word_profile
 from app.application.bible.passages import PassageService
 from app.application.bible.search import SearchService
@@ -165,3 +166,16 @@ async def word_profile_route(
     repo: Annotated[BibleRepository, Depends(get_bible_repository)],
 ) -> dict[str, Any]:
     return _illustration(await word_profile(repo, strong))
+
+
+Lon = Annotated[float, Query(ge=-180, le=180)]
+Lat = Annotated[float, Query(ge=-90, le=90)]
+
+
+@router.get("/geography")
+async def geography_route(
+    w: Lon, s: Lat, e: Lon, n: Lat, repo: Annotated[BibleRepository, Depends(get_bible_repository)]
+) -> dict[str, Any]:
+    if e - w > 60 or n - s > 40 or e <= w or n <= s:
+        raise HTTPException(status_code=422, detail="quadro inválido")
+    return await geography_for(repo, BBox(w, s, e, n))
