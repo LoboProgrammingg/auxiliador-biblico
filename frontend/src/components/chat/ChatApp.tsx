@@ -15,13 +15,7 @@ import { StatusLine } from "./StatusLine";
 import { VersePopup } from "./VersePopup";
 import { VERSE_SEARCH_ID } from "./VerseSearch";
 
-const STARTERS = [
-  "Errei de novo e sinto que me afastei de Jesus. O que eu faço?",
-  "Interprete para mim o capítulo 1 de João.",
-];
-
 function Welcome() {
-  const send = useChat((s) => s.send);
   return (
     <div className="mx-auto mt-[12vh] max-w-xl">
       <h1 className="font-escritura text-[2.1rem] leading-tight font-bold text-couro">Sobre o que você quer conversar hoje?</h1>
@@ -29,19 +23,6 @@ function Welcome() {
       <p className="mt-2 text-tinta-suave">
         Conte o que está vivendo, peça um estudo ou uma palavra para o dia. Eu lembro das nossas conversas.
       </p>
-      <ul className="mt-6 space-y-2">
-        {STARTERS.map((s) => (
-          <li key={s}>
-            <button
-              type="button"
-              onClick={() => void send(s)}
-              className="w-full rounded-lg border border-borda bg-pergaminho-claro px-4 py-3 text-left hover:border-ouro"
-            >
-              {s}
-            </button>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
