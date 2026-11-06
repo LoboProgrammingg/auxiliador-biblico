@@ -16,7 +16,6 @@ import { VersePopup } from "./VersePopup";
 import { VERSE_SEARCH_ID } from "./VerseSearch";
 
 const STARTERS = [
-  "Estou com medo de não conseguir pagar as contas deste mês.",
   "Errei de novo e sinto que me afastei de Jesus. O que eu faço?",
   "Interprete para mim o capítulo 1 de João.",
 ];
