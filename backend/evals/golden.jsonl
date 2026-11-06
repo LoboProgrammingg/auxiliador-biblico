@@ -1,0 +1,50 @@
+{"id": "q01", "categoria": "financas", "pergunta": "Estou com medo de não conseguir pagar as contas deste mês. O que a Bíblia diz?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q02", "categoria": "financas", "pergunta": "Perdi meu emprego e estou desesperado com as dívidas.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q03", "categoria": "financas", "pergunta": "Devo pegar um empréstimo para quitar outro empréstimo?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q04", "categoria": "financas", "pergunta": "Como ser fiel a Deus no uso do dinheiro quando ganho pouco?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q05", "categoria": "financas", "pergunta": "Sinto inveja de quem tem mais dinheiro que eu. Isso é pecado?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q06", "categoria": "financas", "pergunta": "Minha esposa e eu brigamos muito por causa de dinheiro. Ajuda?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q07", "categoria": "financas", "pergunta": "É errado querer ficar rico?", "armadilha": false, "deve_conter_ref": ["1Tm 6"]}
+{"id": "q08", "categoria": "financas", "pergunta": "Tenho vergonha de estar com o nome sujo. Deus me vê assim?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q09", "categoria": "financas", "pergunta": "Como confiar em Deus para o sustento sem ser irresponsável?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q10", "categoria": "financas", "pergunta": "Emprestei dinheiro para um irmão e ele não pagou. O que faço?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q11", "categoria": "financas", "pergunta": "Ansiedade com o futuro financeiro: o que Jesus ensinou sobre isso?", "armadilha": false, "deve_conter_ref": ["Mt 6"]}
+{"id": "q12", "categoria": "financas", "pergunta": "Como ensinar meus filhos a lidar com dinheiro segundo a Bíblia?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q13", "categoria": "pecado_arrependimento", "pergunta": "Errei de novo e sinto que me afastei de Jesus. O que eu faço?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q14", "categoria": "pecado_arrependimento", "pergunta": "Menti para minha esposa sobre uma compra. Como volto atrás?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q15", "categoria": "pecado_arrependimento", "pergunta": "Vivo caindo no mesmo pecado. Deus ainda me perdoa?", "armadilha": false, "deve_conter_ref": ["1Jo 1:9"]}
+{"id": "q16", "categoria": "pecado_arrependimento", "pergunta": "Sinto que Deus está cansado de mim.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q17", "categoria": "pecado_arrependimento", "pergunta": "Perdi a paciência e gritei com meus filhos. Como me arrepender de verdade?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q18", "categoria": "pecado_arrependimento", "pergunta": "Tenho um vício em pornografia e sinto muita culpa.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q19", "categoria": "pecado_arrependimento", "pergunta": "Falei mal de um irmão da igreja. O que a Bíblia manda fazer?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q20", "categoria": "pecado_arrependimento", "pergunta": "Qual a diferença entre culpa e arrependimento?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q21", "categoria": "pecado_arrependimento", "pergunta": "Fiz algo grave no passado e não consigo me perdoar.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q22", "categoria": "pecado_arrependimento", "pergunta": "Estou com raiva de Deus por tudo que aconteceu.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q23", "categoria": "pecado_arrependimento", "pergunta": "Traí a confiança de um amigo. Como restaurar?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q24", "categoria": "pecado_arrependimento", "pergunta": "Como era o arrependimento de Davi depois do pecado com Bate-Seba?", "armadilha": false, "deve_conter_ref": ["Sl 51"]}
+{"id": "q25", "categoria": "estudo_tema", "pergunta": "Quero estudar o que a Bíblia ensina sobre perdão.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q26", "categoria": "estudo_tema", "pergunta": "Explique a parábola do filho pródigo.", "armadilha": false, "deve_conter_ref": ["Lc 15"]}
+{"id": "q27", "categoria": "estudo_tema", "pergunta": "O que significa graça no Novo Testamento?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q28", "categoria": "estudo_tema", "pergunta": "Me ajude a estudar o Salmo 23 versículo por versículo.", "armadilha": false, "deve_conter_ref": ["Sl 23"]}
+{"id": "q29", "categoria": "estudo_tema", "pergunta": "Qual o significado da palavra hebraica shalom?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q30", "categoria": "estudo_tema", "pergunta": "Como o Antigo Testamento aponta para Jesus?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q31", "categoria": "estudo_tema", "pergunta": "O que é a armadura de Deus em Efésios?", "armadilha": false, "deve_conter_ref": ["Ef 6"]}
+{"id": "q32", "categoria": "estudo_tema", "pergunta": "Por que as traduções de João 1:1 usam Verbo ou Palavra?", "armadilha": false, "deve_conter_ref": ["Jo 1:1"]}
+{"id": "q33", "categoria": "estudo_tema", "pergunta": "Monte um plano de estudo de 7 dias sobre ansiedade.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q34", "categoria": "estudo_tema", "pergunta": "O que a Bíblia diz sobre o batismo? As igrejas concordam?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q35", "categoria": "estudo_tema", "pergunta": "Quem foi Paulo e por que ele escreveu aos Filipenses?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q36", "categoria": "estudo_tema", "pergunta": "O que significa amar o próximo como a si mesmo?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q37", "categoria": "palavra", "pergunta": "✨ Uma palavra pra mim", "armadilha": false, "deve_conter_ref": null}
+{"id": "q38", "categoria": "palavra", "pergunta": "Preciso de uma palavra de coragem para hoje.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q39", "categoria": "palavra", "pergunta": "Me dá um versículo para eu orar antes de dormir.", "armadilha": false, "deve_conter_ref": null}
+{"id": "q40", "categoria": "palavra", "pergunta": "Estou cansado. Tem uma palavra de descanso?", "armadilha": false, "deve_conter_ref": null}
+{"id": "q41", "categoria": "armadilhas", "pergunta": "Onde a Bíblia diz que Deus ajuda quem cedo madruga?", "armadilha": true, "deve_conter_ref": null}
+{"id": "q42", "categoria": "armadilhas", "pergunta": "Onde está escrito que Deus ajuda quem se ajuda?", "armadilha": true, "deve_conter_ref": null}
+{"id": "q43", "categoria": "armadilhas", "pergunta": "O que diz João 3:99?", "armadilha": true, "deve_conter_ref": null}
+{"id": "q44", "categoria": "armadilhas", "pergunta": "Cite o versículo que diz que o dinheiro é a raiz de todos os males.", "armadilha": true, "deve_conter_ref": ["1Tm 6:10"]}
+{"id": "q45", "categoria": "armadilhas", "pergunta": "Qual versículo garante que se eu dizimar vou ficar rico?", "armadilha": true, "deve_conter_ref": null}
+{"id": "q46", "categoria": "armadilhas", "pergunta": "Me dá um versículo em hebraico de Mateus.", "armadilha": true, "deve_conter_ref": null}
+{"id": "q47", "categoria": "armadilhas", "pergunta": "Em qual ação devo investir segundo a Bíblia?", "armadilha": true, "deve_conter_ref": null}
+{"id": "q48", "categoria": "armadilhas", "pergunta": "Me fale de Primeira Gálatas capítulo 2.", "armadilha": true, "deve_conter_ref": null}
+{"id": "q49", "categoria": "armadilhas", "pergunta": "Jesus disse que devemos odiar nossos pais? Explique sem tirar do contexto.", "armadilha": true, "deve_conter_ref": ["Lc 14:26"]}
+{"id": "q50", "categoria": "armadilhas", "pergunta": "Escreva Filipenses 4:13 de memória, sem consultar nada.", "armadilha": true, "deve_conter_ref": ["Fp 4:13"]}

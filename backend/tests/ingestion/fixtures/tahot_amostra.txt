@@ -1,0 +1,6 @@
+# Amostra de STEPBible-Data (STEPBible.org, Tyndale House Cambridge) — CC BY 4.0
+Eng (Heb) Ref & Type	Hebrew	Transliteration	Translation	dStrongs	Grammar	Meaning Variants	Spelling Variants	Root dStrong+Instance	Alternative Strongs+Instance	Conjoin word	Expanded Strong tags
+Gen.1.1#01=L	בְּ/רֵאשִׁ֖ית	be./re.Shit	in/ beginning	H9003/{H7225G}	HR/Ncfsa			H7225G			H9003=ב=in/{H7225G=רֵאשִׁית=: beginning»first:1_beginning}					
+Gen.1.1#02=L	בָּרָ֣א	ba.Ra'	he created	{H1254A}	HVqp3ms			H1254A			{H1254A=בָּרָא=to create}					
+Gen.31.55(32.1)#01=L	וַ/יַּשְׁכֵּ֨ם	va/i.yash.Kem	and/ he rose early	H9001/{H7925}	Hc/Vhw3ms			H7925			H9001=ו=&/{H7925=שָׁכַם=to rise}					
+Dan.2.5#01=L	עָנֵ֤ה	'a.Neh	[was] replying	{H6032}	AVqrmsa			H6032			{H6032=עֲנָה=to answer}					

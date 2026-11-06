@@ -1,0 +1,9 @@
+# Amostra de STEPBible-Data (STEPBible.org, Tyndale House Cambridge) — CC BY 4.0
+Mat.6.34#01=NKO	μὴ (mē)	Not	G3361=PRT-N	μή=not	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			No	not	#01»03:G3309	G3361					
+Mat.6.34#02=NKO	οὖν (oun)	therefore	G3767=CONJ	οὖν=therefore/then	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			por lo tanto	then	#02	G3767					
+Mat.6.34#03=NKO	μεριμνήσητε (merimnēsēte)	shall you be anxious	G3309=V-AAS-2P	μεριμνάω=to worry	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			tengan ansiedad	to worry	#03	G3309_A					
+Mat.6.34#04=NKO	εἰς (eis)	about	G1519=PREP	εἰς=toward	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			hacia dentro	toward	#04	G1519					
+Jhn.1.1#01=NKO	Ἐν (En)	In [the]	G1722=PREP	ἐν=in/on/among	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			En	in	#01	G1722					
+Jhn.1.1#02=NKO	ἀρχῇ (archē)	beginning	G0746=N-DSF	ἀρχή=beginning	NA28+NA27+Tyn+SBL+WH+Treg+TR+Byz			principio	beginning	#02	G0746					
+
+Word & Type	Greek	English translation	dStrongs = Grammar	Dictionary form =  Gloss

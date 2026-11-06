@@ -1,0 +1,27 @@
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Dados baixados/gerados (textos bíblicos têm copyright — nunca commitar)
+data/
+*.sqlite
+*.dump
+*.sql.gz
+
+# Ferramentas
+graphify-out/
+
+# Python
+__pycache__/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+backend/evals/results/
+
+# Node
+node_modules/
+.next/
+frontend/test-results/
+frontend/playwright-report/

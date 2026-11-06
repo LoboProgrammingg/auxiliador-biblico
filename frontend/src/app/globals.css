@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --color-pergaminho: #f3ecd9;
+  --color-pergaminho-claro: #faf6ea;
+  --color-tinta: #2e2418;
+  --color-tinta-suave: #5a4a37;
+  --color-couro: #4a3524;
+  --color-couro-claro: #6b5039;
+  --color-ouro: #a0802f;
+  --color-ouro-claro: #e7d6a6;
+  --color-oliva: #5d6b3a;
+  --color-vinho: #8c2f39;
+  --color-borda: #dccfb0;
+  --font-ui: var(--font-atkinson), system-ui, sans-serif;
+  --font-escritura: var(--font-gentium), "Noto Serif Hebrew", Georgia, serif;
+  --font-hebraico: var(--font-hebrew), var(--font-gentium), serif;
+}
+
+html,
+body {
+  background: var(--color-pergaminho);
+  color: var(--color-tinta);
+  font-family: var(--font-ui);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-ouro);
+  outline-offset: 2px;
+}
+
+.resposta {
+  font-size: 1.0625rem;
+  line-height: 1.7;
+}
+.resposta h1,
+.resposta h2,
+.resposta h3 {
+  font-family: var(--font-escritura);
+  color: var(--color-couro);
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+.resposta h2 { font-size: 1.35rem; }
+.resposta h3 { font-size: 1.15rem; }
+.resposta p { margin: 0.6em 0; max-width: 70ch; }
+.resposta ul,
+.resposta ol { margin: 0.6em 0 0.6em 1.4em; max-width: 68ch; }
+.resposta ul { list-style: disc; }
+.resposta ol { list-style: decimal; }
+.resposta li { margin: 0.25em 0; }
+.resposta strong { color: var(--color-couro); }
+.resposta em { color: var(--color-tinta-suave); }
+.resposta a { color: var(--color-couro); }
+.resposta table { border-collapse: collapse; margin: 0.8em 0; }
+.resposta td,
+.resposta th { border: 1px solid var(--color-borda); padding: 0.3em 0.6em; }
+
+@keyframes respira {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+.pensando span { animation: respira 1.4s ease-in-out infinite; }
+.pensando span:nth-child(2) { animation-delay: 0.2s; }
+.pensando span:nth-child(3) { animation-delay: 0.4s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pensando span { animation: none; opacity: 0.8; }
+}

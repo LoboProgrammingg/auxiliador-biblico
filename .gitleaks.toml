@@ -1,0 +1,8 @@
+title = "auxiliador-biblico"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Arquivos de exemplo sem segredos"
+paths = ['''\.env\.example$''']

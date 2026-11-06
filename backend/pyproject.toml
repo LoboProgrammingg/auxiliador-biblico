@@ -1,0 +1,49 @@
+[project]
+name = "auxiliador-biblico-backend"
+version = "0.1.0"
+description = "Auxiliador Bíblico — backend (FastAPI + Claude Agent SDK)"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "claude-agent-sdk>=0.2.178",
+    "fastapi>=0.162.0",
+    "httpx>=0.28.1",
+    "pgvector>=0.5.1",
+    "pydantic-settings>=2.16.2",
+    "sqlalchemy[asyncio]>=2.1.8",
+    "typesafe-sdk>=0.7.5",
+    "uvicorn[standard]>=0.54.0",
+    "voyageai>=0.5.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.4.1",
+    "pytest>=9.2.0",
+    "pytest-asyncio>=1.4.1.post1",
+    "ruff>=0.17.4",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+asyncio_default_test_loop_scope = "session"
+testpaths = ["tests"]
+markers = ["live: usa serviços reais (modelo local, Claude Code); rodar com -m live"]
+addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "ASYNC"]
+
+[tool.ruff.lint.per-file-ignores]
+# ingestão é CLI em lote, fora do servidor: I/O de arquivo bloqueante é aceitável
+"app/infrastructure/ingestion/*" = ["ASYNC230", "ASYNC240"]
+"tests/*" = ["ASYNC230", "ASYNC240", "E501"]
+"app/application/chat/prompts.py" = ["E501"]
+"evals/run_eval.py" = ["E501"]
