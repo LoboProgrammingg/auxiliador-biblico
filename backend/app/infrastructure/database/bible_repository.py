@@ -3,7 +3,16 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Place, Verse
+from app.domain.bible.entities import (
+    CrossReference,
+    LexiconEntry,
+    OriginalWord,
+    PassageHit,
+    Person,
+    PersonRelation,
+    Place,
+    Verse,
+)
 from app.domain.bible.references import VerseRange
 from app.domain.bible.repositories import BibleRepository
 from app.infrastructure.ingestion.translations import REFERENCE_TRANSLATION
@@ -151,3 +160,50 @@ class SqlBibleRepository(BibleRepository):
         return [
             Place(name, kind, float(lon), float(lat), list(verses)) for name, kind, lon, lat, verses in result.all()
         ]
+
+    async def chapter_sizes(self, translation: str = "acf") -> dict[tuple[int, int], int]:
+        result = await self._session.execute(
+            text(
+                "SELECT book_id, chapter, count(*) FROM verses WHERE translation_code = :t "
+                "GROUP BY book_id, chapter ORDER BY book_id, chapter"
+            ),
+            {"t": translation},
+        )
+        return {(b, c): n for b, c, n in result.all()}
+
+    async def people_in_range(self, book_id: int, chapter_start: int, chapter_end: int) -> list[Person]:
+        result = await self._session.execute(
+            text(
+                "SELECT p.id, COALESCE(p.name_pt, p.name_en), p.name_pt IS NOT NULL, p.brief, "
+                "array_agg(DISTINCT v.chapter * 1000 + v.verse) "
+                "FROM people p JOIN person_verses v ON v.person_id = p.id "
+                "WHERE v.book_id = :b AND v.chapter BETWEEN :c1 AND :c2 "
+                "GROUP BY p.id ORDER BY min(v.chapter * 1000 + v.verse), 2"
+            ),
+            {"b": book_id, "c1": chapter_start, "c2": chapter_end},
+        )
+        return [
+            Person(pid, name, is_pt, brief, [(k // 1000, k % 1000) for k in sorted(keys)])
+            for pid, name, is_pt, brief, keys in result.all()
+        ]
+
+    async def relations(self, person_ids: list[str]) -> list[PersonRelation]:
+        result = await self._session.execute(
+            text(
+                "SELECT r.person_id, r.kind, r.other_id, COALESCE(o.name_pt, o.name_en), o.name_pt IS NOT NULL "
+                "FROM person_relations r LEFT JOIN people o ON o.id = r.other_id "
+                "WHERE r.person_id = ANY(:ids) ORDER BY r.id"
+            ),
+            {"ids": person_ids},
+        )
+        return [PersonRelation(a, k, o, name, bool(pt)) for a, k, o, name, pt in result.all()]
+
+    async def strong_by_book(self, strong: str) -> list[tuple[int, int]]:
+        result = await self._session.execute(
+            text(
+                "SELECT book_id, count(*) FROM original_words WHERE strong = :s AND verse > 0 "
+                "GROUP BY book_id ORDER BY book_id"
+            ),
+            {"s": strong},
+        )
+        return [(b, n) for b, n in result.all()]

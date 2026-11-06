@@ -55,7 +55,7 @@ class SequenceRunner:
         self.runners = [FakeAgentRunner(s) for s in scripts]
         self.calls: list[dict[str, object]] = []
 
-    def run(self, prompt, session_id, tools):  # type: ignore[no-untyped-def]
+    def run(self, prompt, session_id, tools, effort=None):  # type: ignore[no-untyped-def]
         runner = self.runners[min(len(self.calls), len(self.runners) - 1)]
         self.calls.append({"prompt": prompt})
         return runner.run(prompt, session_id, tools)

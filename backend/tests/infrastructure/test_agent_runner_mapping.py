@@ -64,3 +64,13 @@ def test_runner_options_never_enable_webfetch(tmp_path) -> None:  # type: ignore
 
     options = ClaudeAgentRunner("m", "medium", tmp_path, False)._options(None, AgentTools({}, ["WebSearch"], None))  # type: ignore[arg-type]
     assert options.tools == ["WebSearch"] and "WebFetch" in options.disallowed_tools
+
+
+def test_runner_effort_override(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from app.application.chat.ports import AgentTools
+    from app.infrastructure.external.agent_sdk.runner import ClaudeAgentRunner
+
+    runner = ClaudeAgentRunner("m", "medium", tmp_path, False)
+    tools = AgentTools({}, ["WebSearch"], None)  # type: ignore[arg-type]
+    assert runner._options(None, tools).effort == "medium"
+    assert runner._options(None, tools, "high").effort == "high"

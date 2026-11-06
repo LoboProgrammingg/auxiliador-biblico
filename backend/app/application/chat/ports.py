@@ -62,4 +62,6 @@ AgentEvent = AgentText | AgentToolStart | AgentDone
 
 
 class AgentRunner(Protocol):
-    def run(self, prompt: str, session_id: str | None, tools: AgentTools) -> AsyncIterator[AgentEvent]: ...
+    def run(
+        self, prompt: str, session_id: str | None, tools: AgentTools, effort: str | None = None
+    ) -> AsyncIterator[AgentEvent]: ...

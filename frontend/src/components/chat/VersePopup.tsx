@@ -1,9 +1,10 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { api } from "@/services/api";
 import { useChat, type PopupTarget } from "@/stores/chat";
+import { ListenButton } from "./ListenButton";
 import { BlockSkeleton } from "./Skeletons";
 
 const TABS = ["vfl", "acf", "nvt"] as const;
@@ -33,6 +34,9 @@ function Context({ reference, translation }: { reference: string; translation: s
         </p>
       ))}
       {data.fallback_label && <p className="mt-2 text-xs italic text-tinta-suave">{data.fallback_label}</p>}
+      <div className="mt-2">
+        <ListenButton book={data.book} chapter={data.chapter} verses={data.verses.filter((v) => v.cited)} />
+      </div>
     </div>
   );
 }
@@ -83,6 +87,61 @@ function CrossReferences({ reference }: { reference: string }) {
   );
 }
 
+function MyNote({ reference }: { reference: string }) {
+  const client = useQueryClient();
+  const { data, isLoading } = useQuery({ queryKey: ["verse-note", reference], queryFn: () => api.verseNote(reference) });
+  const [draft, setDraft] = useState<string | null>(null);
+  const text = draft ?? data?.content ?? "";
+  const save = useMutation({
+    mutationFn: () => api.saveVerseNote(reference, text.trim()),
+    onSuccess: (note) => {
+      client.setQueryData(["verse-note", reference], note);
+      setDraft(null);
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: ["verse-notes"] }),
+  });
+  const remove = useMutation({
+    mutationFn: () => (data ? api.deleteVerseNote(data.id) : Promise.resolve()),
+    onSuccess: () => {
+      client.setQueryData(["verse-note", reference], null);
+      setDraft(null);
+    },
+    onSettled: () => client.invalidateQueries({ queryKey: ["verse-notes"] }),
+  });
+  if (isLoading) return <BlockSkeleton lines={2} />;
+  return (
+    <div>
+      <label htmlFor="my-note" className="sr-only">Minha anotação sobre {reference}</label>
+      <textarea
+        id="my-note"
+        value={text}
+        onChange={(e) => setDraft(e.target.value)}
+        rows={3}
+        maxLength={8000}
+        placeholder="O que Deus está falando com você por este texto?"
+        className="w-full rounded border border-borda bg-pergaminho-claro p-2 leading-relaxed"
+      />
+      <div className="mt-1 flex items-center gap-2 text-sm">
+        <button
+          type="button"
+          disabled={!text.trim() || text === (data?.content ?? "") || save.isPending}
+          onClick={() => save.mutate()}
+          className="rounded-full bg-couro px-3 py-1 font-bold text-pergaminho-claro disabled:opacity-40"
+        >
+          {save.isPending ? "Salvando…" : "Salvar anotação"}
+        </button>
+        {data && (
+          <button type="button" onClick={() => remove.mutate()} className="rounded-full px-3 py-1 text-vinho hover:bg-vinho/10">
+            Apagar
+          </button>
+        )}
+        {save.isSuccess && draft === null && <span className="text-oliva">Guardada no Diário.</span>}
+        {(save.isError || remove.isError) && <span className="text-vinho">Não consegui salvar.</span>}
+      </div>
+    </div>
+  );
+}
+
 export function VersePopup() {
   const popup = useChat((s) => s.popup);
   const close = useChat((s) => s.openPopup);
@@ -129,6 +188,9 @@ function PopupBody({ popup, close }: { popup: PopupTarget; close: () => void }) 
           ))}
         </div>
         <Context reference={popup.reference} translation={tab} />
+        <Section title="Minha anotação">
+          <MyNote reference={popup.reference} />
+        </Section>
         <Section title="Original">
           <Original reference={popup.reference} />
         </Section>

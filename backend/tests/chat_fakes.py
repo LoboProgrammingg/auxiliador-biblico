@@ -15,8 +15,10 @@ class FakeAgentRunner:
     calls: list[dict[str, Any]] = field(default_factory=list)
     delay: float = 0.0
 
-    async def run(self, prompt: str, session_id: str | None, tools: AgentTools) -> AsyncIterator[Any]:
-        self.calls.append({"prompt": prompt, "session_id": session_id, "allowed": tools.allowed})
+    async def run(
+        self, prompt: str, session_id: str | None, tools: AgentTools, effort: str | None = None
+    ) -> AsyncIterator[Any]:
+        self.calls.append({"prompt": prompt, "session_id": session_id, "allowed": tools.allowed, "effort": effort})
         for item in self.script:
             if self.delay:
                 await asyncio.sleep(self.delay)

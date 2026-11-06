@@ -22,7 +22,12 @@ E um botão **✨ Uma palavra pra mim**: uma palavra de consolo por dia, escolhi
 | **Estudo de capítulo** | Peça "interprete João 1": o capítulo vem em cenas, em ordem, com **linha do tempo** e **mapa** desenhados na tela. Os intervalos são conferidos no banco e os lugares vêm de uma base aberta de geografia bíblica. |
 | **O fio da Escritura** | 343 mil referências cruzadas (OpenBible) ligando Antigo e Novo Testamento. |
 | **Memória** | Lembra da sua situação, lutas e pedidos de oração. Você vê, edita e apaga tudo na tela Memória. Nunca guarda CPF, senhas ou cartões. |
-| **Cuidado em crise** | Se uma mensagem indicar risco à vida, a tela mostra na hora o CVV (188) antes da resposta. |
+| **PDFs ilustrados** | Baixe o estudo, a conversa, a palavra do dia ou o plano em PDF: capa, sumário, tipografia de livro, margem para anotar, linha do tempo, mapa, árvore genealógica, lugares na ordem da narrativa, quiasmos, traduções lado a lado, texto original palavra por palavra e onde a palavra-chave mais aparece. Tudo desenhado a partir dos dados, pelo Chrome do seu computador. |
+| **Diário espiritual** | Histórico das palavras do dia, pedidos de oração com a data em que foram respondidos e suas anotações em cada versículo. |
+| **Planos de leitura** | Bíblia em 1 ano, Evangelhos em 30 dias e planos temáticos, com progresso e um botão para estudar a leitura de hoje. |
+| **Ouvir** | Qualquer versículo lido em voz alta pelo próprio navegador (pt-BR). |
+| **Resposta que não se perde** | A resposta continua sendo gerada e gravada mesmo se você fechar a tela; ao voltar, ela aparece. |
+| **Cuidado em crise** | Se uma mensagem indicar risco à vida, a tela mostra na hora o CVV (188) antes da resposta, mesmo sem o Jev (há um detector de expressões de risco no próprio código). |
 
 ## Como funciona por dentro
 
@@ -47,6 +52,7 @@ Nenhum texto bíblico fica neste repositório. Várias traduções têm direitos
 ## Pré-requisitos
 
 - Linux ou macOS, com cerca de 3 GB livres
+- Google Chrome ou Chromium (para gerar os PDFs; nada é enviado para fora)
 - [Docker](https://docs.docker.com/get-docker/) e [uv](https://docs.astral.sh/uv/)
 - [Claude Code](https://code.claude.com) instalado e com login feito (`claude` no terminal)
 - Chave da **Voyage AI** (obrigatória)
@@ -80,7 +86,7 @@ scripts/api.sh           # sobe a API (deixe este terminal aberto)
 
 Abra **http://127.0.0.1:3000**.
 
-A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `places`, `passages`, `alignment`.
+A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `places`, `people`, `passages`, `alignment`.
 
 Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 
@@ -88,6 +94,21 @@ Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 
 - Escreva como falaria com um irmão de confiança. Clique em qualquer referência para ler o contexto, as outras traduções, o original e as passagens ligadas.
 - **🧠 Memória**: veja, corrija ou apague o que ele lembra de você.
+- **📖 Diário**: palavras recebidas, orações (marque quando Deus responder) e anotações. Para anotar um versículo, abra-o e escreva em *Minha anotação*.
+- **🗓️ Planos de leitura**: comece um plano, marque os dias lidos e peça o estudo da leitura de hoje.
+- **PDF**: botão *Baixar PDF do estudo* no topo da conversa, *PDF* na palavra do dia e *Baixar PDF do plano*. O PDF é A4, serve para ler na tela e para imprimir.
+- **🔊 Ouvir**: em cada cartão de versículo.
+- **Atalhos**: `Ctrl+K` nova conversa · `Ctrl+J` ir para um versículo · `/` escrever · `Alt+F` modo foco (sem a lateral, letra maior) · `Esc` fecha a passagem.
+
+## Backup
+
+A API guarda sozinha, uma vez por dia, um backup dos **seus dados** (conversas, memória, diário e planos) em `data/backups/`, e mantém os últimos 30 dias. A base bíblica não entra no backup: é grande e a ingestão a reconstrói.
+
+```bash
+scripts/backup.sh                                  # cria agora o backup de hoje
+scripts/restaurar.sh                               # lista os backups
+scripts/restaurar.sh data/backups/biblia-AAAA-MM-DD.dump   # restaura (antes guarda o estado atual)
+```
 - **Sobre**: fontes, licenças e um exemplo de cartão.
 
 ## Privacidade
@@ -105,6 +126,7 @@ Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 | Hebraico, aramaico e grego (TAHOT, TAGNT) e léxicos (TBESH, TBESG) | [STEPBible.org](https://www.stepbible.org) — Tyndale House Cambridge | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | Referências cruzadas | [OpenBible.info](https://www.openbible.info/labs/cross-references/) | CC BY |
 | Lugares bíblicos com coordenadas (mapas) | [OpenBible.info Bible Geocoding Data](https://github.com/openbibleinfo/Bible-Geocoding-Data) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Pessoas e famílias (árvores genealógicas) | [STEPBible TIPNR](https://github.com/STEPBible/STEPBible-Data) — Tyndale House Cambridge | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 **Conferência da base (medida na ingestão):**
 - 18 traduções carregadas. As edições Ave-Maria, Pastoral e Matos Soares ficaram de fora porque numeram Malaquias com 3 capítulos.
@@ -120,7 +142,7 @@ cd frontend && npx vitest run && npx playwright test
 cd backend && uv run python -m evals.run_eval   # mostra o que vai rodar; --yes executa
 ```
 
-A avaliação usa 50 perguntas sintéticas: finanças, culpa, estudo, "palavra" e 10 armadilhas, como *"onde a Bíblia diz que Deus ajuda quem cedo madruga?"*. O portão de entrega exige ao mesmo tempo:
+A avaliação usa 150 perguntas sintéticas: finanças, culpa, estudo por tema, estudos de capítulo inteiro, a palavra do dia (pelo fluxo real, em datas fictícias), conversas de vários turnos (inclusive lembrar algo de uma conversa anterior), textos colados "de sites" tentando enganar o agente e armadilhas teológicas e de referência, como *"onde a Bíblia diz que Deus ajuda quem cedo madruga?"*. Filtre com `--categorias estudo_capitulo,injecao`, force um esforço com `--esforco high` e veja o histórico de notas com `--historico` (só números, guardados em `data/avaliacoes/`). Sua memória e suas palavras do dia ficam intactas: a avaliação restaura tudo. O portão de entrega exige ao mesmo tempo:
 - 0 referências inventadas
 - 0 citações divergentes
 - 0 interpretações contraditórias

@@ -1,4 +1,9 @@
-import type { ChatEvent, Segment } from "@/types/api";
+import type { ChatEvent, Segment, StoredMessage } from "@/types/api";
+
+export function needsReattach(stored: StoredMessage[]): boolean {
+  const last = stored[stored.length - 1];
+  return last?.role === "assistant" && last.status === "gerando";
+}
 
 export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
   switch (ev.event) {
@@ -15,12 +20,16 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
       return [...segments, { type: "timeline", ...ev.data }];
     case "map":
       return [...segments, { type: "map", ...ev.data }];
+    case "chiasm":
+      return [...segments, { type: "chiasm", ...ev.data }];
     case "issues":
       return [...segments, ...ev.data.items.map((i) => ({ type: "issue" as const, ...i }))];
     case "crisis":
       return [{ type: "crisis", numero: ev.data.numero, url: ev.data.url }, ...segments];
     case "memory_saved":
       return [...segments, { type: "memory", topic: ev.data.topic }];
+    case "error":
+      return [...segments, { type: "error", code: ev.data.code, message: ev.data.message }];
     default:
       return segments;
   }
@@ -30,7 +39,8 @@ export type Block =
   | { kind: "markdown"; markdown: string }
   | { kind: "card"; index: number }
   | { kind: "timeline"; index: number }
-  | { kind: "map"; index: number };
+  | { kind: "map"; index: number }
+  | { kind: "chiasm"; index: number };
 
 function isInline(segments: Segment[], i: number): boolean {
   const prev = segments[i - 1];
@@ -49,7 +59,7 @@ export function toBlocks(segments: Segment[]): Block[] {
   };
   segments.forEach((segment, i) => {
     if (segment.type === "text") markdown += segment.text;
-    else if (segment.type === "timeline" || segment.type === "map") {
+    else if (segment.type === "timeline" || segment.type === "map" || segment.type === "chiasm") {
       flush();
       blocks.push({ kind: segment.type, index: i });
     }

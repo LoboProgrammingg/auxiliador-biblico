@@ -25,8 +25,12 @@ services:
       args:
         NEXT_PUBLIC_API_URL: http://127.0.0.1:8000
     restart: unless-stopped
-    ports:
-      - "127.0.0.1:3000:3000"
+    # Rede do host: as páginas de impressão (PDF) buscam a API em 127.0.0.1:8000, que roda fora do Docker.
+    # Só escuta em 127.0.0.1. No macOS, ative "host networking" no Docker Desktop ou rode a interface com npm.
+    network_mode: host
+    environment:
+      HOSTNAME: 127.0.0.1
+      PORT: "3000"
 
 volumes:
   pgdata:

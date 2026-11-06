@@ -99,3 +99,12 @@ body {
 .resposta hr {
   display: none;
 }
+
+/* Modo de leitura focado: sem lateral, texto maior */
+.foco .resposta {
+  font-size: 1.2rem;
+  line-height: 1.85;
+}
+.foco .resposta figure blockquote {
+  font-size: 1.3rem;
+}

@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     permitir_api_paga: bool = False
     claude_model: str = "claude-sonnet-5-5"
     claude_effort: str = "medium"
+    claude_effort_estudo: str = "high"
+    agent_timeout_s: float = 300.0
     voyage_api_key: str | None = None
     embed_model: str = "voyage-4-large"
     rerank_model: str = "rerank-3"
@@ -24,6 +26,11 @@ class Settings(BaseSettings):
     voyage_tpm: int = 10_000
     voyage_rpm: int = 3
     data_dir: Path = REPO_ROOT / "data"
+    backup_dir: Path = REPO_ROOT / "data" / "backups"
+    backup_keep_days: int = 30
+    backup_enabled: bool = True
+    frontend_url: str = "http://127.0.0.1:3000"
+    chrome_bin: str | None = None
     cors_origins: list[str] = ["http://127.0.0.1:3000", "http://localhost:3000"]
     allowed_hosts: list[str] = ["127.0.0.1", "localhost"]
 

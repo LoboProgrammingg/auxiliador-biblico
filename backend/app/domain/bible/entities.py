@@ -67,3 +67,21 @@ class Place:
     lon: float
     lat: float
     verses: list[int]
+
+
+@dataclass(frozen=True)
+class Person:
+    id: str
+    name: str
+    name_is_pt: bool
+    brief: str | None
+    verses: list[tuple[int, int]]
+
+
+@dataclass(frozen=True)
+class PersonRelation:
+    person_id: str
+    kind: str
+    other_id: str
+    other_name: str | None
+    other_is_pt: bool

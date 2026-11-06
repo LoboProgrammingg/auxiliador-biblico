@@ -1,6 +1,15 @@
 from abc import ABC, abstractmethod
 
-from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Place, Verse
+from app.domain.bible.entities import (
+    CrossReference,
+    LexiconEntry,
+    OriginalWord,
+    PassageHit,
+    Person,
+    PersonRelation,
+    Place,
+    Verse,
+)
 from app.domain.bible.references import VerseRange
 
 
@@ -43,3 +52,15 @@ class BibleRepository(ABC):
 
     @abstractmethod
     async def places_in_chapter(self, book_id: int, chapter: int) -> list[Place]: ...
+
+    @abstractmethod
+    async def chapter_sizes(self, translation: str = "acf") -> dict[tuple[int, int], int]: ...
+
+    @abstractmethod
+    async def people_in_range(self, book_id: int, chapter_start: int, chapter_end: int) -> list[Person]: ...
+
+    @abstractmethod
+    async def relations(self, person_ids: list[str]) -> list[PersonRelation]: ...
+
+    @abstractmethod
+    async def strong_by_book(self, strong: str) -> list[tuple[int, int]]: ...

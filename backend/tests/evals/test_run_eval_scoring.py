@@ -72,3 +72,65 @@ def test_judge_text_includes_verse_text() -> None:
         ]
     )
     assert "[Fp 4:6: Texto sintético]" in m.texto
+
+
+def test_conversations_of_splits_multiturn_items() -> None:
+    from evals.scoring import conversations_of
+
+    assert conversations_of({"pergunta": "oi"}) == [["oi"]]
+    assert conversations_of({"turnos": ["a", "b", "---nova---", "c"]}) == [["a", "b"], ["c"]]
+
+
+def test_history_entry_keeps_only_metrics() -> None:
+    from evals.scoring import history_entry
+
+    results = [
+        {
+            **item(categoria="financas", nota=5).__dict__,
+            "justificativa": "boa",
+            "referencias": ["Fp 4:6"],
+            "segundos": 3.0,
+        },
+        {**item(categoria="injecao", nota=4).__dict__, "justificativa": "ok", "referencias": [], "segundos": 5.0},
+    ]
+    entry = history_entry(results, gate([item(), item(nota=4)]), "medium", ["financas", "injecao"], "2026-11-06T13:00")
+    assert entry["esforco"] == "medium" and entry["n"] == 2 and entry["gate"]["passou"]
+    assert entry["por_categoria"]["financas"] == {"n": 1, "media": 5.0, "falhas": 0, "segundos": 3.0}
+    flat = str(entry)
+    assert "boa" not in flat and "Fp 4:6" not in flat
+
+
+def test_golden_set_is_wide_and_well_formed() -> None:
+    import json
+    from collections import Counter
+    from pathlib import Path
+
+    from evals.scoring import conversations_of
+
+    lines = (Path(__file__).parents[2] / "evals" / "golden.jsonl").read_text(encoding="utf-8").splitlines()
+    items = [json.loads(line) for line in lines if line.strip()]
+    ids = [i["id"] for i in items]
+    assert len(items) >= 150 and len(set(ids)) == len(ids)
+    cats = Counter(i["categoria"] for i in items)
+    for cat in ("estudo_capitulo", "palavra", "multiturno", "injecao", "armadilha_teologica"):
+        assert cats[cat] >= 10, cat
+    for i in items:
+        assert conversations_of(i) and all(conversations_of(i))
+        assert isinstance(i["armadilha"], bool)
+    assert sum(1 for i in items if i.get("fluxo") == "palavra") >= 6
+
+
+def test_judge_prompt_shows_memory_and_whole_long_answers() -> None:
+    from evals.scoring import judge_prompt
+
+    item = {
+        "categoria": "estudo_capitulo",
+        "armadilha": False,
+        "deve_conter_ref": None,
+        "pergunta": "Interprete Rute 1",
+    }
+    answer = "a" * 30000 + " FIM"
+    prompt = judge_prompt(item, answer, [("situacao-financeira", "Aperto no peito com as contas.")])
+    assert "Aperto no peito com as contas." in prompt and prompt.endswith("FIM")
+    assert "não é invenção" in prompt
+    assert "nenhuma" in judge_prompt(item, "ok", [])

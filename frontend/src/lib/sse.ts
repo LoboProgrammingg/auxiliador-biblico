@@ -1,7 +1,7 @@
 import type { ChatEvent } from "@/types/api";
 
 const EVENT_NAMES = new Set([
-  "text", "verse", "invalid_reference", "status", "memory_saved", "crisis", "triage", "issues", "done", "error",
+  "text", "verse", "invalid_reference", "timeline", "map", "chiasm", "status", "memory_saved", "crisis", "triage", "issues", "done", "error",
 ]);
 
 export function parseSSE(chunk: string, carry: string): { events: ChatEvent[]; carry: string } {

@@ -161,6 +161,7 @@ class MessageModel(Base):
     role: Mapped[str] = mapped_column(String(12))
     text: Mapped[str | None] = mapped_column(Text)
     display_segments: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(String(12), default="ok", server_default="ok")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
@@ -206,3 +207,73 @@ class DailyWordModel(Base):
     conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
     reference: Mapped[str | None] = mapped_column(String(60))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PrayerRequestModel(Base):
+    __tablename__ = "prayer_requests"
+    __table_args__ = (CheckConstraint("status IN ('aberto','respondido')", name="ck_prayer_requests_status"),)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(120))
+    details: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(12), default="aberto", server_default="aberto")
+    answer_note: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    answered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class VerseNoteModel(Base):
+    """verse_start = verse_end = 0 marca anotação do capítulo inteiro."""
+
+    __tablename__ = "verse_notes"
+    __table_args__ = (UniqueConstraint("book_id", "chapter", "verse_start", "verse_end", name="uq_verse_notes_range"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    reference: Mapped[str] = mapped_column(String(60))
+    book_id: Mapped[int] = mapped_column(SmallInteger)
+    chapter: Mapped[int] = mapped_column(Integer)
+    verse_start: Mapped[int] = mapped_column(Integer)
+    verse_end: Mapped[int] = mapped_column(Integer)
+    content: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ReadingPlanModel(Base):
+    __tablename__ = "reading_plans"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    code: Mapped[str] = mapped_column(String(40))
+    started_on: Mapped[date] = mapped_column(Date)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlanDayDoneModel(Base):
+    __tablename__ = "plan_days_done"
+    plan_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("reading_plans.id", ondelete="CASCADE"), primary_key=True)
+    day: Mapped[int] = mapped_column(Integer, primary_key=True)
+    done_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PersonModel(Base):
+    __tablename__ = "people"
+    id: Mapped[str] = mapped_column(String(120), primary_key=True)
+    name_en: Mapped[str] = mapped_column(String(120))
+    name_pt: Mapped[str | None] = mapped_column(String(120))
+    brief: Mapped[str | None] = mapped_column(Text)
+
+
+class PersonRelationModel(Base):
+    __tablename__ = "person_relations"
+    __table_args__ = (Index("ix_person_relations_person", "person_id"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    kind: Mapped[str] = mapped_column(String(12))
+    other_id: Mapped[str] = mapped_column(String(120))
+
+
+class PersonVerseModel(Base):
+    __tablename__ = "person_verses"
+    __table_args__ = (Index("ix_person_verses_ref", "book_id", "chapter", "verse"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    person_id: Mapped[str] = mapped_column(ForeignKey("people.id", ondelete="CASCADE"))
+    book_id: Mapped[int] = mapped_column(SmallInteger)
+    chapter: Mapped[int] = mapped_column(Integer)
+    verse: Mapped[int] = mapped_column(Integer)

@@ -6,7 +6,9 @@ import { useState } from "react";
 import { api } from "@/services/api";
 import { useChat } from "@/stores/chat";
 import { Emblem } from "./Ornament";
+import { SHORTCUT_HELP } from "@/lib/shortcuts";
 import { LineSkeleton } from "./Skeletons";
+import { VerseSearch } from "./VerseSearch";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const conversationId = useChat((s) => s.conversationId);
@@ -29,6 +31,7 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         <Emblem className="text-ouro-claro" />
         <p className="font-escritura text-xl leading-tight font-bold">Auxiliador<br />Bíblico</p>
       </div>
+      <VerseSearch />
       <div className="px-3">
         <button
           type="button"
@@ -82,8 +85,18 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
         ))}
       </ul>
       <div className="space-y-0.5 border-t border-pergaminho-claro/15 px-3 py-3 text-sm">
+        <Link href="/planos" className="block rounded-lg px-3 py-2 hover:bg-couro-claro/60">🗓️ Planos de leitura</Link>
+        <Link href="/diario" className="block rounded-lg px-3 py-2 hover:bg-couro-claro/60">📖 Diário</Link>
         <Link href="/memoria" className="block rounded-lg px-3 py-2 hover:bg-couro-claro/60">🧠 Memória</Link>
         <Link href="/sobre" className="block rounded-lg px-3 py-2 hover:bg-couro-claro/60">Sobre</Link>
+        <details className="px-3 pt-1 text-xs text-pergaminho-claro/75">
+          <summary className="cursor-pointer py-1">Atalhos de teclado</summary>
+          <ul className="mt-1 space-y-0.5">
+            {SHORTCUT_HELP.map(([k, what]) => (
+              <li key={k}><kbd className="rounded bg-couro-claro px-1 font-bold">{k}</kbd> {what}</li>
+            ))}
+          </ul>
+        </details>
       </div>
     </nav>
   );

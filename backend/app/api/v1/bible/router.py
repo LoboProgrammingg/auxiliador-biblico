@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -14,6 +14,7 @@ from app.api.v1.bible.schemas import (
     VerseOut,
     WordOut,
 )
+from app.application.bible.illustrations import genealogy, route, word_profile
 from app.application.bible.passages import PassageService
 from app.application.bible.search import SearchService
 from app.domain.bible.errors import InvalidReference
@@ -127,3 +128,40 @@ async def search(
     limit: Annotated[int, Query(ge=1, le=20)] = 8,
 ) -> SearchOut:
     return SearchOut(items=[PassageOut.build(p) for p in await service.search(q, limit)])
+
+
+def _illustration(data: dict[str, Any] | None) -> dict[str, Any]:
+    if data is None:
+        raise HTTPException(status_code=404, detail="sem dados para esta ilustração")
+    return data
+
+
+End = Annotated[int | None, Query(ge=1, le=150)]
+
+
+@router.get("/genealogy")
+async def genealogy_route(
+    ref: Ref, repo: Annotated[BibleRepository, Depends(get_bible_repository)], fim: End = None
+) -> dict[str, Any]:
+    try:
+        return _illustration(await genealogy(repo, ref, fim))
+    except InvalidReference as exc:
+        raise _not_found(ref) from exc
+
+
+@router.get("/route")
+async def route_route(
+    ref: Ref, repo: Annotated[BibleRepository, Depends(get_bible_repository)], fim: End = None
+) -> dict[str, Any]:
+    try:
+        return _illustration(await route(repo, ref, fim))
+    except InvalidReference as exc:
+        raise _not_found(ref) from exc
+
+
+@router.get("/word-profile")
+async def word_profile_route(
+    strong: Annotated[str, Query(pattern=r"^[HG]\d{1,5}[A-Za-z]?$")],
+    repo: Annotated[BibleRepository, Depends(get_bible_repository)],
+) -> dict[str, Any]:
+    return _illustration(await word_profile(repo, strong))

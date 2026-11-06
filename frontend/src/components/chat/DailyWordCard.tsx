@@ -1,5 +1,6 @@
 "use client";
 
+import { API_URL } from "@/services/api";
 import { useChat } from "@/stores/chat";
 import { AssistantBody } from "./MessageView";
 import { Divider } from "./Ornament";
@@ -21,9 +22,16 @@ export function DailyWordCard() {
           <h2 className="font-escritura text-2xl font-bold text-couro">Palavra de hoje</h2>
           {daily.status === "ready" && <p className="text-sm text-tinta-suave first-letter:uppercase">{longDate(daily.word.day)}</p>}
         </div>
-        <button type="button" onClick={close} className="rounded px-2 py-1 text-sm text-tinta-suave hover:bg-borda/60">
-          Fechar
-        </button>
+        <div className="flex items-center gap-1">
+          {daily.status === "ready" && (
+            <a href={`${API_URL}/api/v1/export/palavra/${daily.word.day}.pdf`} className="rounded px-2 py-1 text-sm font-bold text-couro hover:bg-borda/60">
+              PDF
+            </a>
+          )}
+          <button type="button" onClick={close} className="rounded px-2 py-1 text-sm text-tinta-suave hover:bg-borda/60">
+            Fechar
+          </button>
+        </div>
       </div>
       <Divider className="mt-2" />
       <div className="resposta mt-1">

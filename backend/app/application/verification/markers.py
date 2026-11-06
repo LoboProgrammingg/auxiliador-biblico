@@ -8,11 +8,12 @@ from app.domain.bible.errors import InvalidReference
 from app.domain.bible.references import format_reference
 
 MARKER_RE = re.compile(r"\[\[([^\[\]|]{1,60})(?:\|([A-Za-z0-9]{2,10}))?\]\]")
-VISUAL_RE = re.compile(r"\[\[(linha|mapa):([^\[\]]{1,900})\]\]")
+VISUAL_RE = re.compile(r"\[\[(linha|mapa|quiasmo):([^\[\]]{1,900})\]\]")
 SECTION_RE = re.compile(r"^\s*(\d{1,3})\s*[-–]\s*(\d{1,3})\s*=\s*(.{1,80}?)\s*$")
+CHIASM_PART_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*=\s*(.{1,80}?)\s*$")
 MAX_HELD = 80
 MAX_HELD_VISUAL = 950
-VISUAL_PREFIXES = ("[[linha:", "[[mapa:")
+VISUAL_PREFIXES = ("[[linha:", "[[mapa:", "[[quiasmo:")
 
 
 @dataclass(frozen=True)
@@ -46,7 +47,20 @@ class MapOut:
     places: list[dict[str, object]]
 
 
-StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut
+@dataclass(frozen=True)
+class ChiasmOut:
+    marker: str
+    reference: str
+    book: str
+    parts: list[dict[str, object]]
+
+
+StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut | ChiasmOut
+
+
+def mirrored_label(index: int, count: int) -> str:
+    depth = min(index, count - 1 - index)
+    return chr(ord("A") + depth) + ("'" if index > count - 1 - index else "")
 
 
 def _held_limit(buffer: str) -> int:
@@ -76,6 +90,28 @@ class MarkerStreamProcessor:
         reference = format_reference(chapter)
         return TimelineOut(marker, reference, BOOKS[chapter.book_id - 1].pt_name, sections)
 
+    async def _chiasm(self, marker: str, body: str) -> StreamOut | None:
+        """Estrutura em espelho (A B C B' A'): partes em ordem, sem sobreposição, dentro do capítulo."""
+        ref, _, raw_parts = body.partition("|")
+        chapter, last = await self._passages.chapter(ref.strip())
+        parts: list[tuple[int, int, str]] = []
+        for raw in raw_parts.split(";"):
+            match = CHIASM_PART_RE.match(raw)
+            if match is None:
+                return InvalidRefOut(marker)
+            start = int(match.group(1))
+            end = int(match.group(2) or start)
+            if not (start <= end <= last) or (parts and start <= parts[-1][1]) or start < 1:
+                return InvalidRefOut(marker)
+            parts.append((start, end, match.group(3)))
+        if len(parts) < 3:
+            return InvalidRefOut(marker)
+        items: list[dict[str, object]] = [
+            {"label": mirrored_label(i, len(parts)), "start": s, "end": e, "title": t}
+            for i, (s, e, t) in enumerate(parts)
+        ]
+        return ChiasmOut(marker, format_reference(chapter), BOOKS[chapter.book_id - 1].pt_name, items)
+
     async def _map(self, marker: str, body: str) -> StreamOut | None:
         chapter, _ = await self._passages.chapter(body.strip())
         places = await self._passages.places(chapter)
@@ -90,7 +126,7 @@ class MarkerStreamProcessor:
         visual = VISUAL_RE.fullmatch(marker)
         if visual is not None:
             try:
-                handler = self._timeline if visual.group(1) == "linha" else self._map
+                handler = {"linha": self._timeline, "mapa": self._map, "quiasmo": self._chiasm}[visual.group(1)]
                 return await handler(marker, visual.group(2))
             except InvalidReference:
                 return InvalidRefOut(marker)
@@ -121,6 +157,11 @@ class MarkerStreamProcessor:
                 self._buffer = self._buffer[1:]
                 continue
             end = self._buffer.find("]]")
+            inner = self._buffer.find("[[", 2)
+            if inner != -1 and (end == -1 or inner < end):
+                out.append(TextOut(self._buffer[:inner]))
+                self._buffer = self._buffer[inner:]
+                continue
             if end == -1:
                 if len(self._buffer) > _held_limit(self._buffer):
                     out.append(TextOut(self._buffer))

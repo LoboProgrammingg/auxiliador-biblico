@@ -1,14 +1,17 @@
+import uuid
 from datetime import date
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_embedder, get_reranker
 from app.api.v1.chat.router import SessionFactory, _chat_service, get_agent_runner, get_judgments, get_session_factory
 from app.application.chat.ports import AgentRunner, Embedder, Reranker
 from app.application.daily.service import DailyWordError, DailyWordService
 from app.application.judgments.service import JudgmentService
+from app.core.db import get_session
 from app.infrastructure.database.conversation_repository import SqlConversationRepository
 from app.infrastructure.database.daily_word_repository import SqlDailyWordRepository
 
@@ -37,3 +40,19 @@ async def daily_word(
         except DailyWordError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
     return DailyWordOut(day=word.day, reference=word.reference, segments=word.segments)
+
+
+class DailyWordItem(BaseModel):
+    day: date
+    reference: str | None
+    conversation_id: uuid.UUID
+
+
+class DailyWordHistory(BaseModel):
+    items: list[DailyWordItem]
+
+
+@router.get("/daily-words", response_model=DailyWordHistory)
+async def daily_word_history(session: Annotated[AsyncSession, Depends(get_session)]) -> DailyWordHistory:
+    rows = await SqlDailyWordRepository(session).history()
+    return DailyWordHistory(items=[DailyWordItem(day=d, reference=r, conversation_id=c) for d, r, c in rows])

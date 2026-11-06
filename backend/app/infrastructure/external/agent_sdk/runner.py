@@ -50,11 +50,11 @@ class ClaudeAgentRunner:
     def __init__(self, model: str, effort: str, workdir: Path, permitir_api_paga: bool) -> None:
         self._model, self._effort, self._workdir, self._permitir = model, effort, workdir, permitir_api_paga
 
-    def _options(self, session_id: str | None, tools: AgentTools) -> ClaudeAgentOptions:
+    def _options(self, session_id: str | None, tools: AgentTools, effort: str | None = None) -> ClaudeAgentOptions:
         self._workdir.mkdir(parents=True, exist_ok=True)
         return ClaudeAgentOptions(
             model=self._model,
-            effort=self._effort,  # type: ignore[arg-type]
+            effort=effort or self._effort,  # type: ignore[arg-type]
             system_prompt=SYSTEM_PROMPT,
             setting_sources=[],
             cwd=str(self._workdir),
@@ -69,12 +69,14 @@ class ClaudeAgentRunner:
             resume=session_id,
         )
 
-    async def run(self, prompt: str, session_id: str | None, tools: AgentTools) -> AsyncIterator[AgentEvent]:
+    async def run(
+        self, prompt: str, session_id: str | None, tools: AgentTools, effort: str | None = None
+    ) -> AsyncIterator[AgentEvent]:
         if paid_key_blocked(self._permitir):
             yield AgentDone(session_id or "", True, "chave_paga_detectada")
             return
         try:
-            async with ClaudeSDKClient(options=self._options(session_id, tools)) as client:
+            async with ClaudeSDKClient(options=self._options(session_id, tools, effort)) as client:
                 await client.query(prompt)
                 async for message in client.receive_response():
                     for event in map_message(message):

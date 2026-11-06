@@ -2,6 +2,8 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { matchShortcut } from "@/lib/shortcuts";
+import { API_URL } from "@/services/api";
 import { useChat } from "@/stores/chat";
 import { Composer } from "./Composer";
 import { DailyWordCard } from "./DailyWordCard";
@@ -11,6 +13,7 @@ import { BlockSkeleton } from "./Skeletons";
 import { Sidebar } from "./Sidebar";
 import { StatusLine } from "./StatusLine";
 import { VersePopup } from "./VersePopup";
+import { VERSE_SEARCH_ID } from "./VerseSearch";
 
 const STARTERS = [
   "Estou com medo de não conseguir pagar as contas deste mês.",
@@ -45,7 +48,7 @@ function Welcome() {
 }
 
 export function ChatApp() {
-  const { messages, loading, streaming, daily } = useChat();
+  const { messages, loading, streaming, daily, conversationId, focus, toggleFocus, select } = useChat();
   const queryClient = useQueryClient();
   const bottom = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -58,9 +61,30 @@ export function ChatApp() {
     if (!streaming) void queryClient.invalidateQueries({ queryKey: ["conversations"] });
   }, [streaming, queryClient]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const action = matchShortcut(e);
+      if (!action) return;
+      e.preventDefault();
+      if (action === "nova") void select(null);
+      if (action === "foco") {
+        setMenuOpen(false);
+        toggleFocus();
+      }
+      if (action === "compor") document.getElementById("mensagem")?.focus();
+      if (action === "buscar") {
+        if (focus) toggleFocus();
+        setMenuOpen(true);
+        setTimeout(() => document.getElementById(VERSE_SEARCH_ID)?.focus(), 0);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [select, toggleFocus, focus]);
+
   return (
-    <div className="grid h-dvh md:grid-cols-[17rem_1fr]">
-      <div className={`${menuOpen ? "fixed inset-y-0 left-0 z-30 w-72" : "hidden"} md:static md:block`}>
+    <div className={`grid h-dvh ${focus ? "foco" : "md:grid-cols-[17rem_1fr]"}`}>
+      <div className={`${menuOpen ? "fixed inset-y-0 left-0 z-30 w-72" : "hidden"} ${focus ? "" : "md:static md:block"}`}>
         <Sidebar onNavigate={() => setMenuOpen(false)} />
       </div>
       <main className="flex min-h-0 flex-col">
@@ -72,6 +96,28 @@ export function ChatApp() {
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-7 px-5 py-8">
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setMenuOpen(false);
+                  toggleFocus();
+                }}
+                aria-pressed={focus}
+                className="rounded-full border border-borda px-3 py-1 text-sm text-couro hover:border-ouro"
+                title="Alt+F"
+              >
+                {focus ? "Sair do modo foco" : "Modo foco"}
+              </button>
+              {conversationId && messages.length > 0 && !streaming && (
+                <a
+                  href={`${API_URL}/api/v1/export/conversa/${conversationId}.pdf`}
+                  className="rounded-full border border-borda px-3 py-1 text-sm font-bold text-couro hover:border-ouro hover:bg-ouro-claro/40"
+                >
+                  Baixar PDF do estudo
+                </a>
+              )}
+            </div>
             {loading && <BlockSkeleton lines={6} />}
             <DailyWordCard />
             {!loading && messages.length === 0 && daily.status === "idle" && <Welcome />}

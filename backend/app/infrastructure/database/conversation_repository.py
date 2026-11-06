@@ -49,7 +49,7 @@ class SqlConversationRepository(ConversationRepository):
     async def messages(self, conversation_id: uuid.UUID) -> list[Message]:
         result = await self._session.execute(
             text(
-                "SELECT id, role, text, display_segments, created_at FROM messages "
+                "SELECT id, role, text, display_segments, created_at, status FROM messages "
                 "WHERE conversation_id = :id ORDER BY seq"
             ),
             {"id": conversation_id},
@@ -57,12 +57,17 @@ class SqlConversationRepository(ConversationRepository):
         return [Message(*row) for row in result.all()]
 
     async def add_message(
-        self, conversation_id: uuid.UUID, role: str, text_value: str | None, segments: list[dict[str, Any]] | None
+        self,
+        conversation_id: uuid.UUID,
+        role: str,
+        text_value: str | None,
+        segments: list[dict[str, Any]] | None,
+        status: str = "ok",
     ) -> int:
         result = await self._session.execute(
             text(
-                "INSERT INTO messages (conversation_id, seq, role, text, display_segments) "
-                "SELECT :id, COALESCE(max(seq), 0) + 1, :role, :text, CAST(:seg AS jsonb) "
+                "INSERT INTO messages (conversation_id, seq, role, text, display_segments, status) "
+                "SELECT :id, COALESCE(max(seq), 0) + 1, :role, :text, CAST(:seg AS jsonb), :status "
                 "FROM messages WHERE conversation_id = :id RETURNING id"
             ),
             {
@@ -70,6 +75,7 @@ class SqlConversationRepository(ConversationRepository):
                 "role": role,
                 "text": text_value,
                 "seg": json.dumps(segments, ensure_ascii=False) if segments is not None else None,
+                "status": status,
             },
         )
         message_id = int(result.scalar_one())
@@ -92,3 +98,21 @@ class SqlConversationRepository(ConversationRepository):
             {"t": title[:60], "id": conversation_id, "d": DEFAULT_TITLE},
         )
         await self._session.commit()
+
+    async def start_assistant(self, conversation_id: uuid.UUID) -> int:
+        return await self.add_message(conversation_id, "assistant", None, [], status="gerando")
+
+    async def update_message(self, message_id: int, segments: list[dict[str, Any]], status: str) -> None:
+        await self._session.execute(
+            text("UPDATE messages SET display_segments = CAST(:seg AS jsonb), status = :status WHERE id = :id"),
+            {"seg": json.dumps(segments, ensure_ascii=False), "status": status, "id": message_id},
+        )
+        await self._session.commit()
+
+    async def mark_interrupted(self) -> int:
+        result = await self._session.execute(
+            text("UPDATE messages SET status = 'interrompida' WHERE status = 'gerando' RETURNING id")
+        )
+        count = len(result.all())
+        await self._session.commit()
+        return count

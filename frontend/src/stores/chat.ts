@@ -1,13 +1,14 @@
 import { create } from "zustand";
-import { applyEvent } from "@/lib/segments";
-import { api, sendMessage } from "@/services/api";
-import type { DailyWord, Segment, StoredMessage } from "@/types/api";
+import { applyEvent, needsReattach } from "@/lib/segments";
+import { api, attachStream, sendMessage } from "@/services/api";
+import type { ChatEvent, DailyWord, MessageStatus, Segment, StoredMessage } from "@/types/api";
 
 export interface UiMessage {
   key: string;
   role: "user" | "assistant";
   text?: string;
   segments: Segment[];
+  status?: MessageStatus;
   error?: string;
 }
 
@@ -35,14 +36,19 @@ interface ChatState {
   select: (id: string | null) => Promise<void>;
   send: (text: string) => Promise<void>;
   openPopup: (target: PopupTarget | null) => void;
+  focus: boolean;
+  toggleFocus: () => void;
 }
 
 let counter = 0;
 const key = () => `m${++counter}`;
 
 function fromStored(m: StoredMessage): UiMessage {
-  return { key: key(), role: m.role, text: m.text ?? undefined, segments: m.segments ?? [] };
+  return { key: key(), role: m.role, text: m.text ?? undefined, segments: m.segments ?? [], status: m.status };
 }
+
+let controller: AbortController | null = null;
+const DROPPED = "A conexão com o servidor caiu. Confira se a API está rodando (scripts/api.sh).";
 
 export const useChat = create<ChatState>((set, get) => ({
   conversationId: null,
@@ -67,12 +73,22 @@ export const useChat = create<ChatState>((set, get) => ({
   closeDailyWord: () => set({ daily: { status: "idle" } }),
 
   select: async (id) => {
-    if (get().streaming) return;
-    set({ conversationId: id, messages: [], status: null, loading: id !== null });
+    controller?.abort();
+    set({ conversationId: id, messages: [], status: null, streaming: false, loading: id !== null });
     if (!id) return;
     try {
       const stored = await api.messages(id);
-      if (get().conversationId === id) set({ messages: stored.map(fromStored), loading: false });
+      if (get().conversationId !== id) return;
+      if (!needsReattach(stored)) {
+        set({ messages: stored.map(fromStored), loading: false });
+        return;
+      }
+      set({ messages: stored.slice(0, -1).map(fromStored), loading: false });
+      await follow(id, (signal) => attachStream(id, signal));
+      if (get().conversationId === id && !get().streaming) {
+        const fresh = await api.messages(id);
+        if (get().conversationId === id) set({ messages: fresh.map(fromStored) });
+      }
     } catch {
       set({ loading: false, messages: [], conversationId: null });
     }
@@ -85,27 +101,40 @@ export const useChat = create<ChatState>((set, get) => ({
       id = (await api.createConversation()).id;
       set({ conversationId: id });
     }
-    const reply: UiMessage = { key: key(), role: "assistant", segments: [] };
-    set((s) => ({
-      messages: [...s.messages, { key: key(), role: "user", text, segments: [] }, reply],
-      streaming: true,
-      status: "Pensando…",
-    }));
-    const update = (fn: (m: UiMessage) => UiMessage) =>
-      set((s) => ({ messages: s.messages.map((m) => (m.key === reply.key ? fn(m) : m)) }));
-    try {
-      for await (const ev of sendMessage(id, text, new AbortController().signal)) {
-        if (ev.event === "status") set({ status: ev.data.label });
-        else if (ev.event === "error") update((m) => ({ ...m, error: ev.data.message }));
-        else update((m) => ({ ...m, segments: applyEvent(m.segments, ev) }));
-        if (ev.event === "text" || ev.event === "verse") set({ status: null });
-      }
-    } catch {
-      update((m) => ({ ...m, error: "A conexão com o servidor caiu. Confira se a API está rodando (scripts/api.sh)." }));
-    } finally {
-      set({ streaming: false, status: null });
-    }
+    set((s) => ({ messages: [...s.messages, { key: key(), role: "user", text, segments: [] }] }));
+    const target = id;
+    await follow(target, (signal) => sendMessage(target, text, signal));
   },
 
   openPopup: (target) => set({ popup: target }),
+  focus: false,
+  toggleFocus: () => set((s) => ({ focus: !s.focus })),
 }));
+
+/** Acompanha uma resposta (nova ou retomada); se a tela trocar de conversa, só para de assistir. */
+async function follow(id: string, open: (signal: AbortSignal) => AsyncGenerator<ChatEvent>): Promise<void> {
+  const own = new AbortController();
+  controller = own;
+  const reply: UiMessage = { key: key(), role: "assistant", segments: [], status: "gerando" };
+  useChat.setState((s) => ({ messages: [...s.messages, reply], streaming: true, status: "Pensando…" }));
+  const update = (fn: (m: UiMessage) => UiMessage) =>
+    useChat.setState((s) => ({ messages: s.messages.map((m) => (m.key === reply.key ? fn(m) : m)) }));
+  let received = 0;
+  try {
+    for await (const ev of open(own.signal)) {
+      received += 1;
+      if (ev.event === "status") useChat.setState({ status: ev.data.label });
+      else update((m) => ({ ...m, segments: applyEvent(m.segments, ev) }));
+      if (ev.event === "text" || ev.event === "verse" || ev.event === "error") useChat.setState({ status: null });
+      if (ev.event === "done") update((m) => ({ ...m, status: "ok" }));
+    }
+    if (received === 0) useChat.setState((s) => ({ messages: s.messages.filter((m) => m.key !== reply.key) }));
+  } catch {
+    if (!own.signal.aborted) update((m) => ({ ...m, error: DROPPED }));
+  } finally {
+    if (controller === own) {
+      controller = null;
+      if (useChat.getState().conversationId === id) useChat.setState({ streaming: false, status: null });
+    }
+  }
+}

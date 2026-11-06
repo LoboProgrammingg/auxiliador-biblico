@@ -2,6 +2,7 @@
 
 import type { Passage } from "@/types/api";
 import { useChat } from "@/stores/chat";
+import { ListenButton } from "./ListenButton";
 
 export function VerseCard({ passage }: { passage: Passage }) {
   const openPopup = useChat((s) => s.openPopup);
@@ -26,6 +27,7 @@ export function VerseCard({ passage }: { passage: Passage }) {
           {passage.book} {passage.reference.split(" ").slice(1).join(" ")}
         </button>
         <span className="text-tinta-suave">{passage.translation.toUpperCase()}</span>
+        <ListenButton book={passage.book} chapter={passage.chapter} verses={cited} />
         {passage.fallback_label && <span className="text-xs italic text-tinta-suave">{passage.fallback_label}</span>}
       </figcaption>
     </figure>

@@ -19,3 +19,4 @@ class Message:
     text: str | None
     segments: list[dict[str, Any]] | None
     created_at: datetime
+    status: str = "ok"

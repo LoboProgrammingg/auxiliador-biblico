@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+from typing import Any
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.application.bible.passages import PassageService
 from app.application.bible.search import SearchService
 from app.application.chat.events import ChatEvent
+from app.application.chat.ports import AgentText
 from app.application.chat.service import ChatService
 from app.application.chat.tools import ToolExecutor
 from app.application.memory.service import MemoryService
@@ -18,7 +20,7 @@ from tests.chat_fakes import FakeAgentRunner
 from tests.fakes import FakeEmbedder
 
 
-def make_service(session: AsyncSession, runner: FakeAgentRunner) -> ChatService:
+def make_service(session: AsyncSession, runner: FakeAgentRunner, **kwargs: Any) -> ChatService:
     repo = SqlBibleRepository(session)
     passages = PassageService(repo)
     executor = ToolExecutor(
@@ -28,7 +30,7 @@ def make_service(session: AsyncSession, runner: FakeAgentRunner) -> ChatService:
         MemoryService(SqlMemoryRepository(session)),
         None,
     )
-    return ChatService(SqlConversationRepository(session), passages, repo, executor, runner, web_serper=False)
+    return ChatService(SqlConversationRepository(session), passages, repo, executor, runner, web_serper=False, **kwargs)
 
 
 async def collect(svc: ChatService, cid: uuid.UUID, text: str) -> list[ChatEvent]:
@@ -167,3 +169,104 @@ async def test_timeline_marker_streams_event_and_persists(bible_db: AsyncSession
     assert timeline.data["reference"] == "Sl 2" and len(timeline.data["sections"]) == 2
     messages = await SqlConversationRepository(bible_db).messages(cid)
     assert [s["type"] for s in messages[1].segments] == ["text", "timeline", "text"]
+
+
+async def test_assistant_placeholder_is_generating_until_done(bible_db: AsyncSession) -> None:
+    svc = make_service(bible_db, FakeAgentRunner(["Oi ", "tudo bem"]))
+    cid = await new_conversation(bible_db)
+    repo = SqlConversationRepository(bible_db)
+    statuses = []
+    async for event in svc.send(cid, "oi"):
+        if event.name == "text" and not statuses:
+            statuses.append((await repo.messages(cid))[-1].status)
+        if event.name == "done":
+            final = (await repo.messages(cid))[-1]
+            assert event.data["message_id"] == final.id
+    assert statuses == ["gerando"] and final.status == "ok" and final.role == "assistant"
+
+
+async def test_startup_marks_generating_as_interrupted(bible_db: AsyncSession) -> None:
+    repo = SqlConversationRepository(bible_db)
+    cid = await new_conversation(bible_db)
+    await repo.start_assistant(cid)
+    assert await repo.mark_interrupted() == 1
+    assert (await repo.messages(cid))[-1].status == "interrompida"
+
+
+async def test_agent_timeout_records_error_segment(bible_db: AsyncSession) -> None:
+    svc = make_service(bible_db, FakeAgentRunner(["a", "b", "c", "d"], delay=0.05), timeout_s=0.08)
+    cid = await new_conversation(bible_db)
+    events = await collect(svc, cid, "oi")
+    assert any(e.name == "error" and e.data["code"] == "tempo_esgotado" for e in events)
+    assert events[-1].name == "done"
+    stored = (await SqlConversationRepository(bible_db).messages(cid))[-1]
+    assert stored.status == "erro"
+    error = next(s for s in stored.segments if s["type"] == "error")
+    assert error["code"] == "tempo_esgotado" and error["message"]
+
+
+async def test_agent_error_is_persisted_in_segments(bible_db: AsyncSession) -> None:
+    svc = make_service(bible_db, FakeAgentRunner([("done", True, "limite_claude")]))
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "oi")
+    stored = (await SqlConversationRepository(bible_db).messages(cid))[-1]
+    assert stored.status == "erro" and [s["code"] for s in stored.segments if s["type"] == "error"] == ["limite_claude"]
+
+
+async def test_runner_exception_is_recorded_not_left_generating(bible_db: AsyncSession) -> None:
+    class Boom(FakeAgentRunner):
+        async def run(self, prompt, session_id, tools, effort=None):  # type: ignore[no-untyped-def,override]
+            yield AgentText("começo ")
+            raise RuntimeError("falhou")
+
+    cid = await new_conversation(bible_db)
+    events = await collect(make_service(bible_db, Boom([])), cid, "oi")
+    assert any(e.name == "error" for e in events) and events[-1].name == "done"
+    assert (await SqlConversationRepository(bible_db).messages(cid))[-1].status == "erro"
+
+
+async def test_locks_are_released_and_removed(bible_db: AsyncSession) -> None:
+    from app.application.chat import service as service_module
+
+    cid = await new_conversation(bible_db)
+    await collect(make_service(bible_db, FakeAgentRunner(["oi"])), cid, "oi")
+    assert cid not in service_module._LOCKS
+
+
+async def test_crisis_card_without_jev(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estou aqui com você."])
+    events = await collect(make_service(bible_db, runner), await new_conversation(bible_db), "não quero mais viver")
+    assert events[0].name == "crisis" and events[0].data["numero"] == "188"
+    assert "risco_à_vida=alto" in runner.calls[0]["prompt"]
+
+
+async def test_crisis_regex_overrides_low_jev_score(bible_db: AsyncSession) -> None:
+    from tests.judge_fakes import FakeJudge
+
+    judge = FakeJudge(nouls={"crise": 0.1}, choices={"momento": ("outro", 0.5)}, scores={"angustia": (1.0, 0.5)})
+    runner = FakeAgentRunner(["Estou aqui."])
+    events = await collect(make_judged(bible_db, runner, judge), await new_conversation(bible_db), "quero me matar")
+    assert events[0].name == "crisis" and "risco_à_vida=alto" in runner.calls[0]["prompt"]
+
+
+async def test_no_crisis_for_everyday_text_without_jev(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Oi"])
+    events = await collect(make_service(bible_db, runner), await new_conversation(bible_db), "morrendo de rir")
+    assert "crisis" not in [e.name for e in events] and "Triagem" not in runner.calls[0]["prompt"]
+
+
+async def test_chapter_study_requests_study_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estudo."])
+    svc = make_service(bible_db, runner, study_effort="high")
+    await collect(svc, await new_conversation(bible_db), "Interprete João 1")
+    await collect(svc, await new_conversation(bible_db), "Estou ansioso")
+    assert [c["effort"] for c in runner.calls] == ["high", None]
+
+
+async def test_opinion_request_adds_opinion_block(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Minha leitura."])
+    svc = make_service(bible_db, runner, study_effort="high")
+    await collect(svc, await new_conversation(bible_db), "Na sua opinião, o que significa ser sal da terra?")
+    await collect(svc, await new_conversation(bible_db), "O que a Bíblia diz sobre ser sal da terra?")
+    assert "[Pedido de opinião" in runner.calls[0]["prompt"] and runner.calls[0]["effort"] == "high"
+    assert "[Pedido de opinião" not in runner.calls[1]["prompt"]

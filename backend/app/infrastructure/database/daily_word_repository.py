@@ -23,6 +23,12 @@ class SqlDailyWordRepository:
         )
         await self._session.commit()
 
+    async def history(self, limit: int = 365) -> list[tuple[date, str | None, uuid.UUID]]:
+        result = await self._session.execute(
+            text("SELECT day, reference, conversation_id FROM daily_words ORDER BY day DESC LIMIT :n"), {"n": limit}
+        )
+        return [(d, r, c) for d, r, c in result.all()]
+
     async def recent_references(self, day: date, days: int = 90) -> list[str]:
         result = await self._session.execute(
             text(

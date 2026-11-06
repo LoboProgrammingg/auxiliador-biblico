@@ -1,0 +1,565 @@
+/* Páginas de impressão (A4): tipografia de livro, margem larga para anotar, numeração no rodapé. */
+
+@page {
+  size: A4;
+  margin: 20mm 34mm 22mm 20mm;
+  @bottom-left {
+    content: "Auxiliador Bíblico";
+    font-family: "Gentium Book Plus", Georgia, serif;
+    font-size: 8pt;
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    color: #9a8a6c;
+  }
+  @bottom-right {
+    content: counter(page);
+    font-family: "Gentium Book Plus", Georgia, serif;
+    font-size: 9pt;
+    color: #6b5a40;
+  }
+}
+
+@page :first {
+  margin: 0;
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+html:has(.impressao),
+html:has(.impressao) body {
+  background: #fff;
+  background-image: none;
+}
+
+.impressao {
+  --tinta: #2e2418;
+  --tinta-suave: #5a4a37;
+  --couro: #4a3524;
+  --ouro: #a0802f;
+  --ouro-claro: #e7d6a6;
+  --vinho: #8c2f39;
+  --oliva: #5d6b3a;
+  --papel: #fbf7ec;
+  color: var(--tinta);
+  font-family: var(--font-gentium), "Gentium Book Plus", Georgia, serif;
+  font-size: 11.5pt;
+  line-height: 1.62;
+  hyphens: auto;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+}
+
+@media screen {
+  .impressao {
+    max-width: 210mm;
+    margin: 0 auto 4rem;
+    padding: 0 0 2rem;
+  }
+  .impressao > .secao,
+  .impressao > nav {
+    padding: 18mm 34mm 10mm 20mm;
+    background: #fff;
+    box-shadow: 0 10px 40px -20px rgba(46, 36, 24, 0.5);
+    margin-top: 1.5rem;
+  }
+  .barra-tela {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    display: flex;
+    gap: 1rem;
+    align-items: baseline;
+    padding: 0.7rem 1rem;
+    background: rgba(250, 246, 234, 0.95);
+    border-bottom: 1px solid #dccfb0;
+    font-family: var(--font-atkinson), sans-serif;
+    font-size: 0.9rem;
+  }
+  .barra-tela a {
+    font-weight: 700;
+    color: var(--couro);
+  }
+  .barra-tela span {
+    color: var(--tinta-suave);
+  }
+}
+
+@media print {
+  .barra-tela {
+    display: none;
+  }
+}
+
+/* Capa */
+.capa {
+  position: relative;
+  height: 297mm;
+  width: 210mm;
+  margin: 0 auto;
+  background:
+    radial-gradient(ellipse at 50% 30%, #fffdf6 0%, #f6eedb 55%, #ecdfc0 100%);
+  break-after: page;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.capa-moldura {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.capa-miolo {
+  text-align: center;
+  padding: 0 32mm;
+}
+.capa-sobre {
+  font-variant: small-caps;
+  letter-spacing: 0.22em;
+  font-size: 12pt;
+  color: var(--ouro);
+}
+.capa-emblema {
+  width: 22mm;
+  height: 22mm;
+  margin: 10mm auto 8mm;
+}
+.capa-titulo {
+  font-size: 30pt;
+  line-height: 1.15;
+  font-weight: 700;
+  color: var(--couro);
+  text-wrap: balance;
+}
+.capa-subtitulo {
+  margin-top: 5mm;
+  font-style: italic;
+  font-size: 13pt;
+  color: var(--tinta-suave);
+  text-wrap: balance;
+}
+.capa-divisor {
+  width: 60mm;
+  height: 4mm;
+  margin: 9mm auto 5mm;
+}
+.capa-data {
+  font-size: 12pt;
+  color: var(--tinta-suave);
+}
+.capa-data::first-letter {
+  text-transform: uppercase;
+}
+.capa-rodape {
+  position: absolute;
+  bottom: 22mm;
+  font-size: 8.5pt;
+  color: #8f7f62;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+}
+
+/* Sumário */
+.sumario {
+  break-after: page;
+}
+.sumario h2,
+.secao > h2:not(.pergunta) {
+  font-size: 19pt;
+  font-variant: small-caps;
+  letter-spacing: 0.06em;
+  color: var(--couro);
+  margin: 0 0 5mm;
+  padding-bottom: 2mm;
+  border-bottom: 0.6pt solid var(--ouro);
+}
+.secao > h2:not(.pergunta)::after {
+  content: " ❦";
+  color: var(--ouro);
+  font-size: 13pt;
+}
+.sumario ol {
+  list-style: none;
+  padding: 0;
+}
+.sumario li {
+  margin: 1.6mm 0;
+}
+.sumario .nivel-1 {
+  font-weight: 700;
+  margin-top: 4mm;
+}
+.sumario .nivel-2 {
+  padding-left: 7mm;
+  font-size: 10.5pt;
+}
+.sumario a {
+  color: var(--tinta);
+  text-decoration: none;
+}
+
+/* Corpo */
+.secao {
+  break-before: page;
+}
+.corpo {
+  break-before: auto;
+}
+.pergunta {
+  font-size: 15pt;
+  font-style: italic;
+  font-weight: 400;
+  color: var(--couro);
+  margin: 9mm 0 4mm;
+  padding-left: 5mm;
+  border-left: 2pt solid var(--ouro);
+  break-after: avoid;
+}
+.pergunta:first-child {
+  margin-top: 0;
+}
+.resposta-impressa p {
+  margin: 0 0 3mm;
+  text-align: justify;
+  orphans: 3;
+  widows: 3;
+}
+.resposta-impressa > p:first-of-type::first-letter,
+.palavra .resposta-impressa > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.1em;
+  line-height: 0.85;
+  padding: 1mm 2mm 0 0;
+  color: var(--vinho);
+  font-weight: 700;
+}
+.resposta-impressa h2,
+.resposta-impressa h3,
+.resposta-impressa h4 {
+  color: var(--couro);
+  font-weight: 700;
+  break-after: avoid;
+  line-height: 1.25;
+}
+.resposta-impressa h2 {
+  font-size: 15pt;
+  margin: 8mm 0 3mm;
+}
+.resposta-impressa h3 {
+  font-size: 13.5pt;
+  margin: 7mm 0 2.5mm;
+  font-variant: small-caps;
+  letter-spacing: 0.03em;
+}
+.resposta-impressa h3::before {
+  content: "";
+  display: block;
+  width: 12mm;
+  height: 0.8pt;
+  background: var(--ouro);
+  margin-bottom: 2mm;
+}
+.resposta-impressa h4 {
+  font-size: 12pt;
+  margin: 5mm 0 2mm;
+}
+.resposta-impressa ul,
+.resposta-impressa ol {
+  margin: 0 0 3mm 6mm;
+}
+.resposta-impressa hr {
+  display: none;
+}
+.ref {
+  color: var(--couro);
+}
+
+/* Versículo */
+.versiculo {
+  margin: 5mm 0 5mm 2mm;
+  padding: 3.5mm 5mm 3mm 7mm;
+  border-left: 1.6pt solid var(--ouro);
+  background: linear-gradient(110deg, #fbf6e6, #f6ecd2);
+  border-radius: 0 2mm 2mm 0;
+  break-inside: avoid;
+  position: relative;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.versiculo::before {
+  content: "“";
+  position: absolute;
+  left: 1.5mm;
+  top: -2mm;
+  font-size: 30pt;
+  color: rgba(160, 128, 47, 0.35);
+}
+.versiculo blockquote {
+  margin: 0;
+  font-size: 12.5pt;
+  line-height: 1.7;
+}
+.versiculo sup {
+  font-size: 7pt;
+  color: var(--ouro);
+  font-weight: 700;
+  margin-right: 0.8mm;
+}
+.versiculo figcaption {
+  margin-top: 1.5mm;
+  font-size: 9.5pt;
+  font-weight: 700;
+  color: var(--couro);
+}
+.traducao {
+  font-weight: 400;
+  color: var(--tinta-suave);
+  letter-spacing: 0.05em;
+}
+.aviso {
+  font-size: 9pt;
+  font-style: italic;
+  color: var(--tinta-suave);
+}
+
+/* Ilustrações */
+.ilustracao {
+  margin: 6mm 0;
+  padding: 4mm 5mm;
+  border: 0.5pt solid #dccfb0;
+  border-radius: 2mm;
+  background: #fffdf7;
+  break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ilustracao > figcaption {
+  font-weight: 700;
+  font-size: 12pt;
+  color: var(--couro);
+  margin-bottom: 2.5mm;
+}
+.ilustracao-parte {
+  break-inside: avoid;
+}
+.legenda {
+  font-size: 8.5pt;
+  line-height: 1.4;
+  color: var(--tinta-suave);
+  margin-top: 2mm;
+}
+.cenas {
+  list-style: none;
+  padding: 0;
+  margin: 2mm 0 0;
+  font-size: 10.5pt;
+}
+.cenas li {
+  display: flex;
+  gap: 3mm;
+  padding: 1mm 0;
+  border-bottom: 0.3pt solid #e8dcc0;
+}
+.cena-n {
+  width: 5mm;
+  color: var(--ouro);
+  font-weight: 700;
+}
+.cena-t {
+  flex: 1;
+}
+.cena-v {
+  color: var(--tinta-suave);
+  font-size: 9pt;
+}
+.cvv,
+.cvv-rodape {
+  border: 1pt solid var(--vinho);
+  color: var(--vinho);
+  padding: 3mm 4mm;
+  border-radius: 1.5mm;
+  font-weight: 700;
+  margin: 4mm 0;
+}
+
+/* Aprofundamento */
+.intro {
+  font-style: italic;
+  color: var(--tinta-suave);
+  margin-bottom: 4mm;
+}
+.aprofundamento-item {
+  margin-bottom: 9mm;
+}
+.aprofundamento-item h3,
+.pessoas-lugares h3 {
+  font-size: 15pt;
+  color: var(--vinho);
+  margin: 6mm 0 3mm;
+  break-after: avoid;
+}
+.aprofundamento-item h4 {
+  font-variant: small-caps;
+  letter-spacing: 0.05em;
+  color: var(--couro);
+  font-size: 11pt;
+  margin: 4mm 0 2mm;
+  break-after: avoid;
+}
+.comparativo {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3mm;
+  break-inside: avoid;
+}
+.comparativo-coluna {
+  border-top: 1.2pt solid var(--ouro);
+  padding-top: 1.5mm;
+  font-size: 10pt;
+  line-height: 1.5;
+}
+.comparativo-nome {
+  font-weight: 700;
+  color: var(--couro);
+  letter-spacing: 0.05em;
+}
+.comparativo-nome span {
+  display: block;
+  font-weight: 400;
+  font-size: 8pt;
+  letter-spacing: 0;
+  color: var(--tinta-suave);
+}
+.comparativo sup {
+  font-size: 6.5pt;
+  color: var(--ouro);
+}
+.comparativo mark {
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--ouro);
+  text-decoration-thickness: 1.2pt;
+  text-underline-offset: 1.2pt;
+}
+.interlinear {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.8mm;
+  list-style: none;
+  padding: 0;
+  break-inside: avoid;
+}
+.interlinear li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 18mm;
+  padding: 1.5mm 2mm;
+  border: 0.4pt solid #dccfb0;
+  border-radius: 1.2mm;
+  background: #fffdf7;
+  text-align: center;
+}
+.hebraico {
+  font-family: var(--font-hebrew), "Noto Serif Hebrew", serif;
+  font-size: 15pt;
+}
+.grego {
+  font-size: 14pt;
+}
+.translit {
+  font-style: italic;
+  font-size: 8.5pt;
+  color: var(--tinta-suave);
+}
+.strong {
+  font-size: 7.5pt;
+  font-weight: 700;
+  color: var(--ouro);
+}
+.glosa {
+  font-size: 8pt;
+}
+.perfil {
+  break-inside: avoid;
+}
+.perfil-lema {
+  font-size: 13pt;
+}
+.perfil-lema .hebraico,
+.perfil-lema .grego {
+  font-size: 20pt;
+  color: var(--couro);
+}
+
+/* Plano */
+.plano p {
+  margin-bottom: 3mm;
+}
+.progresso-barra {
+  height: 3mm;
+  background: #eee3c8;
+  border-radius: 2mm;
+  overflow: hidden;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.progresso-barra div {
+  height: 100%;
+  background: linear-gradient(90deg, var(--ouro), var(--oliva));
+}
+.progresso p {
+  font-size: 9pt;
+  color: var(--tinta-suave);
+  margin-top: 1mm;
+}
+.dias {
+  list-style: none;
+  padding: 0;
+  margin-top: 6mm;
+  columns: 2;
+  column-gap: 8mm;
+  font-size: 9.5pt;
+}
+.dias li {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+  padding: 0.9mm 0;
+  border-bottom: 0.3pt solid #ece2c8;
+  break-inside: avoid;
+}
+.caixa {
+  display: inline-block;
+  width: 3.2mm;
+  height: 3.2mm;
+  border: 0.6pt solid var(--couro);
+  border-radius: 0.6mm;
+  font-size: 7pt;
+  line-height: 3mm;
+  text-align: center;
+  color: var(--oliva);
+  flex-shrink: 0;
+}
+.dia {
+  width: 13mm;
+  color: var(--tinta-suave);
+  flex-shrink: 0;
+}
+.lido .leitura {
+  color: var(--tinta-suave);
+}
+
+/* Fontes */
+.fontes ul {
+  padding-left: 5mm;
+  font-size: 9.5pt;
+}
+.fontes li {
+  margin-bottom: 2mm;
+}

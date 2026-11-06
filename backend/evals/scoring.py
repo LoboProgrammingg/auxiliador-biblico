@@ -1,6 +1,7 @@
 import json
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.application.chat.events import ChatEvent
 
@@ -96,3 +97,63 @@ def gate(results: list[ItemResult]) -> GateResult:
         and media >= GATE_MEAN
     )
     return GateResult(passou, totais, round(media, 2))
+
+
+NEW_CONVERSATION = "---nova---"
+
+
+def conversations_of(item: dict[str, Any]) -> list[list[str]]:
+    """Uma pergunta simples vira uma conversa; `turnos` pode abrir conversas novas com ---nova---."""
+    if "turnos" not in item:
+        return [[item["pergunta"]]]
+    groups: list[list[str]] = [[]]
+    for turn in item["turnos"]:
+        if turn == NEW_CONVERSATION:
+            groups.append([])
+        else:
+            groups[-1].append(turn)
+    return [g for g in groups if g]
+
+
+def _failures(r: dict[str, Any]) -> int:
+    return r["refs_inventadas"] + r["citacoes_divergentes"] + r["interpretacao_contradiz"] + (1 if r["erro"] else 0)
+
+
+def history_entry(
+    results: list[dict[str, Any]], summary: GateResult, esforco: str, categorias: list[str], quando: str
+) -> dict[str, Any]:
+    """Linha do histórico: só números (nada de texto da resposta, nem referências)."""
+    by_cat: dict[str, list[dict[str, Any]]] = {}
+    for r in results:
+        by_cat.setdefault(r["categoria"], []).append(r)
+    per_category = {}
+    for cat, rows in sorted(by_cat.items()):
+        notas = [r["nota"] for r in rows if r["nota"] is not None]
+        per_category[cat] = {
+            "n": len(rows),
+            "media": round(sum(notas) / len(notas), 2) if notas else 0.0,
+            "falhas": sum(_failures(r) for r in rows),
+            "segundos": round(sum(r["segundos"] for r in rows) / len(rows), 1),
+        }
+    return {
+        "quando": quando,
+        "esforco": esforco,
+        "categorias": categorias,
+        "n": len(results),
+        "gate": {"passou": summary.passou, "totais": summary.totais, "media_juiz": summary.media_juiz},
+        "por_categoria": per_category,
+    }
+
+
+MAX_JUDGED_CHARS = 60000
+
+
+def judge_prompt(item: dict[str, Any], answer: str, memories: list[tuple[str, str]]) -> str:
+    """O juiz vê a resposta inteira e a memória que o assistente tinha (lembrar dela não é invenção)."""
+    memory = "\n".join(f"- {topic}: {content}" for topic, content in memories) or "nenhuma"
+    return (
+        f"Pergunta ({item['categoria']}, armadilha={item['armadilha']}, referências esperadas="
+        f"{item['deve_conter_ref']}):\n{item['pergunta']}\n\n"
+        f"Memória do usuário disponível ao assistente (citar o que está aqui não é invenção):\n{memory}\n\n"
+        f"Resposta avaliada:\n{answer[:MAX_JUDGED_CHARS]}"
+    )

@@ -18,4 +18,13 @@ describe("parseSSE", () => {
   test("ignores malformed blocks", () => {
     expect(parseSSE("lixo\n\n", "").events).toEqual([]);
   });
+
+  test("keeps timeline and map events", () => {
+    const r = parseSSE(
+      'event: timeline\ndata: {"marker":"m","reference":"Jo 1","book":"João","sections":[]}\n\n' +
+        'event: map\ndata: {"marker":"m","reference":"Jo 1","places":[]}\n\n',
+      "",
+    );
+    expect(r.events.map((e) => e.event)).toEqual(["timeline", "map"]);
+  });
 });

@@ -29,6 +29,12 @@ async def test_marker_split_across_chunks_yields_one_card(proc: MarkerStreamProc
     assert card.passage.reference == "Fp 2:3" and card.marker == "[[Fp 2:3|VFL]]"
 
 
+async def test_nested_marker_keeps_inner_card(proc: MarkerStreamProcessor) -> None:
+    out = await proc.feed("veja [[ver [[Fp 2:3]] hoje") + await proc.flush()
+    assert prose(out) == "veja [[ver  hoje"
+    assert [o.passage.reference for o in out if isinstance(o, VerseOut)] == ["Fp 2:3"]
+
+
 async def test_invalid_marker_never_becomes_card(proc: MarkerStreamProcessor) -> None:
     out = await proc.feed("Veja [[Jo 1:99]] agora") + await proc.flush()
     assert not any(isinstance(o, VerseOut) for o in out)
@@ -144,3 +150,22 @@ async def test_map_marker_with_places(proc: MarkerStreamProcessor, bible_db) -> 
     assert card.reference == "Fp 2" and card.places == [
         {"name": "Filipos", "kind": "settlement", "lon": 24.28, "lat": 41.01, "verses": [3]}
     ]
+
+
+async def test_chiasm_marker_assigns_mirrored_labels(proc: MarkerStreamProcessor) -> None:
+    from app.application.verification.markers import ChiasmOut
+
+    out = await proc.feed("[[quiasmo:Sl 2|1=Os reis;2-3=Conspiram;4=Deus ri;5=Fala;6=O rei]]") + await proc.flush()
+    chiasm = next(o for o in out if isinstance(o, ChiasmOut))
+    assert chiasm.reference == "Sl 2"
+    assert [p["label"] for p in chiasm.parts] == ["A", "B", "C", "B'", "A'"]
+    assert chiasm.parts[1] == {"label": "B", "start": 2, "end": 3, "title": "Conspiram"}
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["Sl 2|1-3=a;2-4=b;5-6=c", "Sl 2|1=a;2=b;3-9=c", "Sl 2|1=a;2=b", "Sl 2|3=a;1=b;5=c"],
+)
+async def test_invalid_chiasm_is_rejected(proc: MarkerStreamProcessor, body: str) -> None:
+    out = await proc.feed(f"[[quiasmo:{body}]]") + await proc.flush()
+    assert [type(o) for o in out if not isinstance(o, TextOut)] == [InvalidRefOut]

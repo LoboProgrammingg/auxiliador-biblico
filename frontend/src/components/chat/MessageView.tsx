@@ -5,6 +5,7 @@ import remarkGfm from "remark-gfm";
 import { toBlocks } from "@/lib/segments";
 import { useChat, type UiMessage } from "@/stores/chat";
 import type { IssueKind, Segment } from "@/types/api";
+import { ChiasmCard } from "./ChiasmCard";
 import { MapCard } from "./MapCard";
 import { TimelineCard } from "./TimelineCard";
 import { VerseCard } from "./VerseCard";
@@ -64,6 +65,8 @@ export function AssistantBody({ segments }: { segments: Segment[] }) {
           if (segment.type === "timeline")
             return <TimelineCard key={i} reference={segment.reference} book={segment.book} sections={segment.sections} />;
           if (segment.type === "map") return <MapCard key={i} reference={segment.reference} places={segment.places} />;
+          if (segment.type === "chiasm")
+            return <ChiasmCard key={i} reference={segment.reference} book={segment.book} parts={segment.parts} />;
           return null;
         }
         const first = blocks.findIndex((b) => b.kind === "markdown") === i;
@@ -115,6 +118,7 @@ export function MessageView({ message }: { message: UiMessage }) {
   const crisis = message.segments.find((s): s is Extract<Segment, { type: "crisis" }> => s.type === "crisis");
   const memories = message.segments.filter((s): s is Extract<Segment, { type: "memory" }> => s.type === "memory");
   const study = message.segments.some((s) => s.type === "timeline");
+  const errors = message.segments.filter((s): s is Extract<Segment, { type: "error" }> => s.type === "error");
   return (
     <article className={study ? "resposta estudo" : "resposta"}>
       {crisis && <CrisisCard numero={crisis.numero} url={crisis.url} />}
@@ -122,6 +126,14 @@ export function MessageView({ message }: { message: UiMessage }) {
       {memories.map((m, i) => (
         <p key={i} className="mt-2 text-sm text-oliva">🧠 Lembrei: {m.topic.replaceAll("-", " ")}</p>
       ))}
+      {errors.map((e, i) => (
+        <p key={i} role="status" className="mt-3 max-w-[68ch] text-sm font-bold text-vinho">{e.message}</p>
+      ))}
+      {message.status === "interrompida" && (
+        <p className="mt-3 max-w-[68ch] text-sm text-tinta-suave italic">
+          Esta resposta foi interrompida porque o servidor reiniciou. Envie a pergunta de novo para receber a resposta completa.
+        </p>
+      )}
       {message.error && <p className="mt-3 max-w-[68ch] text-sm font-bold text-vinho">{message.error}</p>}
       <Issues segments={message.segments} />
     </article>

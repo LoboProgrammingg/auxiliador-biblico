@@ -20,6 +20,7 @@ ERROR_MESSAGES = {
     ),
     "limite_claude": "Você atingiu o limite de uso do Claude por agora. Tente de novo mais tarde.",
     "recusa": "Não consigo responder isso desta forma. Podemos conversar de outro jeito?",
+    "tempo_esgotado": "A resposta demorou demais e foi interrompida. Tente de novo, talvez com um pedido menor.",
     "agente_erro": "Algo deu errado ao gerar a resposta. Tente de novo em instantes.",
 }
 

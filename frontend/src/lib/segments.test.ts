@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Passage, Segment } from "@/types/api";
-import { applyEvent, toBlocks } from "./segments";
+import { applyEvent, needsReattach, toBlocks } from "./segments";
 
 const passage: Passage = {
   reference: "Fp 4:6",
@@ -75,5 +75,20 @@ describe("visual blocks", () => {
     s = applyEvent(s, { event: "map", data: { marker: "[[mapa:Jo 1]]", reference: "Jo 1", places: [] } });
     s = applyEvent(s, { event: "text", data: { text: "\nCena 1" } });
     expect(toBlocks(s).map((b) => b.kind)).toEqual(["markdown", "timeline", "map", "markdown"]);
+  });
+});
+
+describe("robustness", () => {
+  test("error event becomes a stored-like error segment", () => {
+    const out = applyEvent([], { event: "error", data: { code: "tempo_esgotado", message: "Demorou." } });
+    expect(out).toEqual([{ type: "error", code: "tempo_esgotado", message: "Demorou." }]);
+  });
+
+  test("needsReattach only when last assistant message is still generating", () => {
+    const base = { text: null, segments: [], created_at: "" };
+    expect(needsReattach([{ ...base, role: "user", status: "ok" }, { ...base, role: "assistant", status: "gerando" }])).toBe(true);
+    expect(needsReattach([{ ...base, role: "assistant", status: "ok" }])).toBe(false);
+    expect(needsReattach([{ ...base, role: "assistant", status: "interrompida" }])).toBe(false);
+    expect(needsReattach([])).toBe(false);
   });
 });

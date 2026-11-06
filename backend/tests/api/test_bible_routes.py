@@ -88,3 +88,11 @@ async def test_search_route_validates_and_returns(api: httpx.AsyncClient) -> Non
     assert (await api.get("/api/v1/bible/search", params={"q": "a"})).status_code == 422
     r = await api.get("/api/v1/bible/search", params={"q": "sintético Filipenses"})
     assert r.status_code == 200 and isinstance(r.json()["items"], list)
+
+
+async def test_illustration_routes_validate_and_404(api: httpx.AsyncClient) -> None:  # type: ignore[name-defined]
+    assert (await api.get("/api/v1/bible/genealogy", params={"ref": "Ap 1"})).status_code == 404
+    assert (await api.get("/api/v1/bible/genealogy", params={"ref": "Livro 9"})).status_code == 404
+    assert (await api.get("/api/v1/bible/route", params={"ref": "Mt 2", "fim": 3})).status_code == 404
+    assert (await api.get("/api/v1/bible/word-profile", params={"strong": "X1"})).status_code == 422
+    assert (await api.get("/api/v1/bible/word-profile", params={"strong": "G3309"})).status_code == 404

@@ -58,11 +58,18 @@ async def test_conversation_lifecycle_and_sse(api: httpx.AsyncClient) -> None:
         "role": "user",
         "text": "Estou ansioso com as contas",
         "segments": None,
+        "status": "ok",
         "created_at": msgs[0]["created_at"],
     }
+    assert msgs[1]["status"] == "ok"
     assert [s["type"] for s in msgs[1]["segments"]] == ["text", "verse"]
     assert (await api.delete(f"/api/v1/conversations/{cid}")).status_code == 204
     assert (await api.get(f"/api/v1/conversations/{cid}/messages")).status_code == 404
+
+
+async def test_stream_endpoint_204_when_idle(api: httpx.AsyncClient) -> None:
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    assert (await api.get(f"/api/v1/conversations/{cid}/stream")).status_code == 204
 
 
 async def test_message_text_validation(api: httpx.AsyncClient) -> None:
@@ -85,3 +92,12 @@ async def test_daily_word_route_returns_same_word_twice(api: httpx.AsyncClient) 
     body = first.json()
     assert body["reference"] == "Fp 2:3" and [s["type"] for s in body["segments"]] == ["text", "verse"]
     assert (await api.post("/api/v1/daily-word")).json() == body
+
+
+async def test_conversation_meta(api: httpx.AsyncClient) -> None:
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    meta = (await api.get(f"/api/v1/conversations/{cid}")).json()
+    assert meta["id"] == cid and meta["title"] == "Nova conversa" and meta["updated_at"]
+    import uuid as _uuid
+
+    assert (await api.get(f"/api/v1/conversations/{_uuid.uuid4()}")).status_code == 404

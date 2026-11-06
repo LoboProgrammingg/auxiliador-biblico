@@ -13,6 +13,7 @@ from app.infrastructure.ingestion.alignment import semantic_alignment
 from app.infrastructure.ingestion.checks import check_original_coverage
 from app.infrastructure.ingestion.crossrefs import load_crossrefs, read_crossref_zip
 from app.infrastructure.ingestion.passages import create_passages, embed_passages
+from app.infrastructure.ingestion.people import TIPNR_URL, load_people
 from app.infrastructure.ingestion.places import PLACES_URL, load_places
 from app.infrastructure.ingestion.sources import CROSSREF_URL, STEPBIBLE_BASE, TRANSLATION_URL, download
 from app.infrastructure.ingestion.stepbible import (
@@ -125,12 +126,18 @@ async def step_places(session: AsyncSession) -> dict[str, Any]:
     return {"lugares": await load_places(session, path)}
 
 
+async def step_people(session: AsyncSession) -> dict[str, Any]:
+    path = await download(TIPNR_URL, get_settings().data_dir / "sources" / "stepbible" / "tipnr.txt")
+    return {"pessoas": await load_people(session, path)}
+
+
 STEPS: dict[str, Step] = {
     "download": step_download,
     "translations": step_translations,
     "originals": step_originals,
     "crossrefs": step_crossrefs,
     "places": step_places,
+    "people": step_people,
     "passages": step_passages,
     "alignment": step_alignment,
 }
