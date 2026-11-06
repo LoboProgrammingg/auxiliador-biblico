@@ -15,10 +15,11 @@ class SqlConversationRepository(ConversationRepository):
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def create(self) -> uuid.UUID:
+    async def create(self, kind: str = "chat") -> uuid.UUID:
         new_id = uuid.uuid4()
         await self._session.execute(
-            text("INSERT INTO conversations (id, title) VALUES (:id, :t)"), {"id": new_id, "t": DEFAULT_TITLE}
+            text("INSERT INTO conversations (id, title, kind) VALUES (:id, :t, :k)"),
+            {"id": new_id, "t": DEFAULT_TITLE, "k": kind},
         )
         await self._session.commit()
         return new_id
@@ -33,7 +34,10 @@ class SqlConversationRepository(ConversationRepository):
 
     async def recent(self) -> list[Conversation]:
         result = await self._session.execute(
-            text("SELECT id, title, agent_session_id, updated_at FROM conversations ORDER BY updated_at DESC LIMIT 200")
+            text(
+                "SELECT id, title, agent_session_id, updated_at FROM conversations WHERE kind = 'chat' "
+                "ORDER BY updated_at DESC LIMIT 200"
+            )
         )
         return [Conversation(*row) for row in result.all()]
 

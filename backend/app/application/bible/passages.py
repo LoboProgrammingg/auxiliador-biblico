@@ -1,4 +1,4 @@
-from app.domain.bible.entities import ResolvedPassage
+from app.domain.bible.entities import Place, ResolvedPassage
 from app.domain.bible.errors import InvalidReference
 from app.domain.bible.references import VerseRange, format_reference, parse_reference
 from app.domain.bible.repositories import BibleRepository
@@ -71,3 +71,16 @@ class PassageService:
         start = max(1, (r.verse_start or 1) - radius)
         end = min(last, (r.verse_end or last) + radius)
         return await self.resolve(VerseRange(r.book_id, r.chapter, start, end), translation)
+
+    async def chapter(self, ref: str) -> tuple[VerseRange, int]:
+        """Capítulo inteiro (ignora versículos) e seu último versículo; levanta InvalidReference."""
+        r = parse_reference(ref)
+        if r is None:
+            raise InvalidReference(ref)
+        last = await self._repo.last_verse(r.book_id, r.chapter)
+        if last is None:
+            raise InvalidReference(ref)
+        return VerseRange(r.book_id, r.chapter, None, None), last
+
+    async def places(self, r: VerseRange) -> list[Place]:
+        return await self._repo.places_in_chapter(r.book_id, r.chapter)

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Verse
+from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Place, Verse
 from app.domain.bible.references import VerseRange
 
 
@@ -40,3 +40,6 @@ class BibleRepository(ABC):
 
     @abstractmethod
     async def translation_names(self) -> dict[str, str]: ...
+
+    @abstractmethod
+    async def places_in_chapter(self, book_id: int, chapter: int) -> list[Place]: ...

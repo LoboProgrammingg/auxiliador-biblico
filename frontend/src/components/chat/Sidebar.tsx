@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { api } from "@/services/api";
 import { useChat } from "@/stores/chat";
+import { Emblem } from "./Ornament";
 import { LineSkeleton } from "./Skeletons";
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
@@ -23,9 +24,10 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   });
 
   return (
-    <nav className="flex h-full flex-col bg-couro text-pergaminho-claro" aria-label="Conversas">
-      <div className="px-5 pt-5 pb-4">
-        <p className="font-escritura text-xl font-bold">Auxiliador Bíblico</p>
+    <nav className="flex h-full flex-col bg-gradient-to-b from-[#4f3826] via-couro to-[#3a2a1c] text-pergaminho-claro shadow-[inset_-1px_0_0_rgba(160,128,47,0.35)]" aria-label="Conversas">
+      <div className="flex items-center gap-2.5 px-5 pt-6 pb-5">
+        <Emblem className="text-ouro-claro" />
+        <p className="font-escritura text-xl leading-tight font-bold">Auxiliador<br />Bíblico</p>
       </div>
       <div className="px-3">
         <button

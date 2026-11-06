@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from pgvector.sqlalchemy import Vector
@@ -7,6 +7,7 @@ from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -143,6 +144,7 @@ class ConversationModel(Base):
     __tablename__ = "conversations"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title: Mapped[str] = mapped_column(String(120), default="Nova conversa")
+    kind: Mapped[str] = mapped_column(String(12), default="chat", server_default="chat")
     agent_session_id: Mapped[str | None] = mapped_column(String(120))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
@@ -176,3 +178,31 @@ class IngestionCheckpointModel(Base):
     step: Mapped[str] = mapped_column(String(80), primary_key=True)
     detail: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     done_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PlaceModel(Base):
+    __tablename__ = "places"
+    id: Mapped[str] = mapped_column(String(20), primary_key=True)
+    name_en: Mapped[str] = mapped_column(String(120))
+    name_pt: Mapped[str | None] = mapped_column(String(120))
+    kind: Mapped[str] = mapped_column(String(40))
+    lon: Mapped[float] = mapped_column()
+    lat: Mapped[float] = mapped_column()
+
+
+class PlaceVerseModel(Base):
+    __tablename__ = "place_verses"
+    __table_args__ = (Index("ix_place_verses_ref", "book_id", "chapter", "verse"),)
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    place_id: Mapped[str] = mapped_column(ForeignKey("places.id", ondelete="CASCADE"))
+    book_id: Mapped[int] = mapped_column(SmallInteger)
+    chapter: Mapped[int] = mapped_column(Integer)
+    verse: Mapped[int] = mapped_column(Integer)
+
+
+class DailyWordModel(Base):
+    __tablename__ = "daily_words"
+    day: Mapped[date] = mapped_column(Date, primary_key=True)
+    conversation_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+    reference: Mapped[str | None] = mapped_column(String(60))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

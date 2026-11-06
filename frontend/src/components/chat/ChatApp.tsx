@@ -4,6 +4,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "@/stores/chat";
 import { Composer } from "./Composer";
+import { DailyWordCard } from "./DailyWordCard";
+import { Divider } from "./Ornament";
 import { MessageView } from "./MessageView";
 import { BlockSkeleton } from "./Skeletons";
 import { Sidebar } from "./Sidebar";
@@ -13,14 +15,15 @@ import { VersePopup } from "./VersePopup";
 const STARTERS = [
   "Estou com medo de não conseguir pagar as contas deste mês.",
   "Errei de novo e sinto que me afastei de Jesus. O que eu faço?",
-  "Quero estudar o que a Bíblia ensina sobre perdão.",
+  "Interprete para mim o capítulo 1 de João.",
 ];
 
 function Welcome() {
   const send = useChat((s) => s.send);
   return (
     <div className="mx-auto mt-[12vh] max-w-xl">
-      <h1 className="font-escritura text-3xl font-bold text-couro">Sobre o que você quer conversar hoje?</h1>
+      <h1 className="font-escritura text-[2.1rem] leading-tight font-bold text-couro">Sobre o que você quer conversar hoje?</h1>
+      <Divider className="mt-3" />
       <p className="mt-2 text-tinta-suave">
         Conte o que está vivendo, peça um estudo ou uma palavra para o dia. Eu lembro das nossas conversas.
       </p>
@@ -42,7 +45,7 @@ function Welcome() {
 }
 
 export function ChatApp() {
-  const { messages, loading, streaming } = useChat();
+  const { messages, loading, streaming, daily } = useChat();
   const queryClient = useQueryClient();
   const bottom = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -70,7 +73,8 @@ export function ChatApp() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl space-y-7 px-5 py-8">
             {loading && <BlockSkeleton lines={6} />}
-            {!loading && messages.length === 0 && <Welcome />}
+            <DailyWordCard />
+            {!loading && messages.length === 0 && daily.status === "idle" && <Welcome />}
             {messages.map((m) => (
               <MessageView key={m.key} message={m} />
             ))}

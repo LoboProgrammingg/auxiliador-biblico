@@ -157,3 +157,13 @@ async def test_memory_rejects_sensitive_data(bible_db: AsyncSession) -> None:
     events = await collect(make_judged(bible_db, runner, FakeJudge()), await new_conversation(bible_db), "x")
     assert not any(e.name == "memory_saved" for e in events)
     assert await MemoryService(SqlMemoryRepository(bible_db)).list_all() == []
+
+
+async def test_timeline_marker_streams_event_and_persists(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estrutura:\n", "[[linha:Sl 2|1-3=Começo;4-6=Fim]]", "\nPronto."])
+    cid = await new_conversation(bible_db)
+    events = await collect(make_service(bible_db, runner), cid, "estude Sl 2")
+    timeline = next(e for e in events if e.name == "timeline")
+    assert timeline.data["reference"] == "Sl 2" and len(timeline.data["sections"]) == 2
+    messages = await SqlConversationRepository(bible_db).messages(cid)
+    assert [s["type"] for s in messages[1].segments] == ["text", "timeline", "text"]

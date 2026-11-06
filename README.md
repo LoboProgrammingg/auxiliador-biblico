@@ -8,7 +8,7 @@ Feito para três momentos:
 - **Depois de uma queda**: quando você sente que se afastou do que Jesus ensinou. Fala a verdade com graça, sem condenar e sem relativizar.
 - **Estudo por temas**: perdão, fé, família, santidade e outros, com o original em hebraico ou grego, comparação de traduções e ligações entre Antigo e Novo Testamento.
 
-E um botão **✨ Uma palavra pra mim**, que escolhe uma passagem para o que você está vivendo.
+E um botão **✨ Uma palavra pra mim**: uma palavra de consolo por dia, escolhida para o que você está vivendo, sem repetir as passagens dos dias anteriores.
 
 ## O que ele tem de diferente
 
@@ -19,6 +19,7 @@ E um botão **✨ Uma palavra pra mim**, que escolhe uma passagem para o que voc
 | **Original palavra por palavra** | Hebraico, aramaico e grego koiné com transliteração, número Strong, morfologia e léxico (STEPBible). |
 | **Concordância do original** | Mostra onde a mesma palavra hebraica ou grega aparece em outros versículos. |
 | **18 traduções** | VFL (padrão, fácil de ler), NVT, ACF, ARA, NAA e outras, com comparação explicada pelo original. |
+| **Estudo de capítulo** | Peça "interprete João 1": o capítulo vem em cenas, em ordem, com **linha do tempo** e **mapa** desenhados na tela. Os intervalos são conferidos no banco e os lugares vêm de uma base aberta de geografia bíblica. |
 | **O fio da Escritura** | 343 mil referências cruzadas (OpenBible) ligando Antigo e Novo Testamento. |
 | **Memória** | Lembra da sua situação, lutas e pedidos de oração. Você vê, edita e apaga tudo na tela Memória. Nunca guarda CPF, senhas ou cartões. |
 | **Cuidado em crise** | Se uma mensagem indicar risco à vida, a tela mostra na hora o CVV (188) antes da resposta. |
@@ -79,7 +80,7 @@ scripts/api.sh           # sobe a API (deixe este terminal aberto)
 
 Abra **http://127.0.0.1:3000**.
 
-A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `passages`, `alignment`.
+A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `places`, `passages`, `alignment`.
 
 Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 
@@ -103,6 +104,7 @@ Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 | Traduções em português (18) | [thiagobodruk/bible](https://github.com/thiagobodruk/bible) | Código MIT; os textos pertencem às editoras. Baixados para uso pessoal, nunca redistribuídos aqui. |
 | Hebraico, aramaico e grego (TAHOT, TAGNT) e léxicos (TBESH, TBESG) | [STEPBible.org](https://www.stepbible.org) — Tyndale House Cambridge | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | Referências cruzadas | [OpenBible.info](https://www.openbible.info/labs/cross-references/) | CC BY |
+| Lugares bíblicos com coordenadas (mapas) | [OpenBible.info Bible Geocoding Data](https://github.com/openbibleinfo/Bible-Geocoding-Data) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 
 **Conferência da base (medida na ingestão):**
 - 18 traduções carregadas. As edições Ave-Maria, Pastoral e Matos Soares ficaram de fora porque numeram Malaquias com 3 capítulos.

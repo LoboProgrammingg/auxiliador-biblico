@@ -5,6 +5,8 @@ import remarkGfm from "remark-gfm";
 import { toBlocks } from "@/lib/segments";
 import { useChat, type UiMessage } from "@/stores/chat";
 import type { IssueKind, Segment } from "@/types/api";
+import { MapCard } from "./MapCard";
+import { TimelineCard } from "./TimelineCard";
 import { VerseCard } from "./VerseCard";
 
 const ISSUE_LABEL: Record<IssueKind, string> = {
@@ -50,19 +52,24 @@ function Issues({ segments }: { segments: Segment[] }) {
   );
 }
 
-function AssistantBody({ segments }: { segments: Segment[] }) {
+export function AssistantBody({ segments }: { segments: Segment[] }) {
   const openPopup = useChat((s) => s.openPopup);
   const blocks = toBlocks(segments);
   return (
     <>
       {blocks.map((block, i) => {
-        if (block.kind === "card") {
+        if (block.kind !== "markdown") {
           const segment = segments[block.index];
-          return segment.type === "verse" ? <VerseCard key={i} passage={segment.passage} /> : null;
+          if (segment.type === "verse") return <VerseCard key={i} passage={segment.passage} />;
+          if (segment.type === "timeline")
+            return <TimelineCard key={i} reference={segment.reference} book={segment.book} sections={segment.sections} />;
+          if (segment.type === "map") return <MapCard key={i} reference={segment.reference} places={segment.places} />;
+          return null;
         }
+        const first = blocks.findIndex((b) => b.kind === "markdown") === i;
         return (
+          <div key={i} className={first ? "md-first" : undefined}>
           <ReactMarkdown
-            key={i}
             remarkPlugins={[remarkGfm]}
             components={{
               a: ({ href, children }) => {
@@ -88,6 +95,7 @@ function AssistantBody({ segments }: { segments: Segment[] }) {
           >
             {block.markdown}
           </ReactMarkdown>
+          </div>
         );
       })}
     </>
@@ -98,7 +106,7 @@ export function MessageView({ message }: { message: UiMessage }) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <p className="max-w-[min(34rem,85%)] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-couro px-4 py-2.5 text-pergaminho-claro">
+        <p className="max-w-[min(34rem,85%)] whitespace-pre-wrap rounded-2xl rounded-br-sm bg-gradient-to-br from-couro to-[#3b2a1c] px-4 py-2.5 text-pergaminho-claro shadow-[0_8px_20px_-14px_rgba(46,36,24,0.8)]">
           {message.text}
         </p>
       </div>
@@ -106,8 +114,9 @@ export function MessageView({ message }: { message: UiMessage }) {
   }
   const crisis = message.segments.find((s): s is Extract<Segment, { type: "crisis" }> => s.type === "crisis");
   const memories = message.segments.filter((s): s is Extract<Segment, { type: "memory" }> => s.type === "memory");
+  const study = message.segments.some((s) => s.type === "timeline");
   return (
-    <article className="resposta">
+    <article className={study ? "resposta estudo" : "resposta"}>
       {crisis && <CrisisCard numero={crisis.numero} url={crisis.url} />}
       <AssistantBody segments={message.segments} />
       {memories.map((m, i) => (

@@ -9,6 +9,8 @@ export function Composer({ onSent }: { onSent?: () => void }) {
   const [text, setText] = useState("");
   const streaming = useChat((s) => s.streaming);
   const send = useChat((s) => s.send);
+  const loadDailyWord = useChat((s) => s.loadDailyWord);
+  const dailyLoading = useChat((s) => s.daily.status === "loading");
 
   const submit = async (value: string) => {
     if (!value.trim() || streaming) return;
@@ -25,7 +27,7 @@ export function Composer({ onSent }: { onSent?: () => void }) {
         void submit(text);
       }}
     >
-      <div className="rounded-2xl border border-borda bg-pergaminho-claro shadow-[0_1px_0_#dccfb0] focus-within:border-ouro">
+      <div className="rounded-2xl border border-borda bg-pergaminho-claro shadow-[0_1px_0_#dccfb0,0_18px_40px_-30px_rgba(74,53,36,0.6)] transition-colors focus-within:border-ouro">
         <label htmlFor="mensagem" className="sr-only">Mensagem</label>
         <textarea
           id="mensagem"
@@ -45,8 +47,11 @@ export function Composer({ onSent }: { onSent?: () => void }) {
         <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
           <button
             type="button"
-            disabled={streaming}
-            onClick={() => void submit(WORD_FOR_ME)}
+            disabled={dailyLoading}
+            onClick={() => {
+              void loadDailyWord();
+              onSent?.();
+            }}
             className="rounded-full px-3 py-1.5 text-sm font-bold text-couro hover:bg-ouro-claro/60 disabled:opacity-50"
           >
             {WORD_FOR_ME}

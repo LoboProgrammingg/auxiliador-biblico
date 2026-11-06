@@ -3,7 +3,7 @@ import json
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Verse
+from app.domain.bible.entities import CrossReference, LexiconEntry, OriginalWord, PassageHit, Place, Verse
 from app.domain.bible.references import VerseRange
 from app.domain.bible.repositories import BibleRepository
 from app.infrastructure.ingestion.translations import REFERENCE_TRANSLATION
@@ -137,3 +137,17 @@ class SqlBibleRepository(BibleRepository):
     async def translation_names(self) -> dict[str, str]:
         result = await self._session.execute(text("SELECT code, name FROM translations"))
         return dict(result.all())
+
+    async def places_in_chapter(self, book_id: int, chapter: int) -> list[Place]:
+        result = await self._session.execute(
+            text(
+                "SELECT COALESCE(p.name_pt, p.name_en), p.kind, p.lon, p.lat, "
+                "array_agg(DISTINCT v.verse ORDER BY v.verse) "
+                "FROM places p JOIN place_verses v ON v.place_id = p.id "
+                "WHERE v.book_id = :b AND v.chapter = :c GROUP BY p.id ORDER BY min(v.verse), 1"
+            ),
+            {"b": book_id, "c": chapter},
+        )
+        return [
+            Place(name, kind, float(lon), float(lat), list(verses)) for name, kind, lon, lat, verses in result.all()
+        ]

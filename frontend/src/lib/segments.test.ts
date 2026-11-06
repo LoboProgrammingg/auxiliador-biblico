@@ -64,3 +64,16 @@ describe("toBlocks", () => {
     expect(blocks).toEqual([{ kind: "markdown", markdown: "Veja [⚠ referência não encontrada](#x1) hoje." }]);
   });
 });
+
+describe("visual blocks", () => {
+  test("timeline and map events become block segments rendered as their own cards", () => {
+    let s: Segment[] = applyEvent([], { event: "text", data: { text: "Estrutura:\n" } });
+    s = applyEvent(s, {
+      event: "timeline",
+      data: { marker: "[[linha:Jo 1|1-18=A]]", reference: "Jo 1", book: "João", sections: [{ start: 1, end: 18, title: "A" }] },
+    });
+    s = applyEvent(s, { event: "map", data: { marker: "[[mapa:Jo 1]]", reference: "Jo 1", places: [] } });
+    s = applyEvent(s, { event: "text", data: { text: "\nCena 1" } });
+    expect(toBlocks(s).map((b) => b.kind)).toEqual(["markdown", "timeline", "map", "markdown"]);
+  });
+});

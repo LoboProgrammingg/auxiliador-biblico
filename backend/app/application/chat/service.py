@@ -10,7 +10,15 @@ from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentT
 from app.application.chat.tools import STATUS, ToolExecutor, ToolOutcome, allowed_tool_names, build_mcp_server
 from app.application.judgments.service import CRISIS_THRESHOLD, JudgmentService, sentence_after, triage_block
 from app.application.verification.final_check import final_check
-from app.application.verification.markers import InvalidRefOut, MarkerStreamProcessor, StreamOut, TextOut, VerseOut
+from app.application.verification.markers import (
+    InvalidRefOut,
+    MapOut,
+    MarkerStreamProcessor,
+    StreamOut,
+    TextOut,
+    TimelineOut,
+    VerseOut,
+)
 from app.domain.bible.repositories import BibleRepository
 from app.domain.conversation.repositories import ConversationRepository
 
@@ -50,6 +58,14 @@ class _Turn:
             payload = {"marker": out.marker, "passage": passage_payload(out.passage)}
             self.segments.append({"type": "verse", **payload})
             return ChatEvent("verse", payload)
+        if isinstance(out, TimelineOut):
+            payload = {"marker": out.marker, "reference": out.reference, "book": out.book, "sections": out.sections}
+            self.segments.append({"type": "timeline", **payload})
+            return ChatEvent("timeline", payload)
+        if isinstance(out, MapOut):
+            payload = {"marker": out.marker, "reference": out.reference, "places": out.places}
+            self.segments.append({"type": "map", **payload})
+            return ChatEvent("map", payload)
         assert isinstance(out, InvalidRefOut)
         self.segments.append({"type": "invalid_reference", "marker": out.marker})
         return ChatEvent("invalid_reference", {"marker": out.marker})

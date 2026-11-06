@@ -104,3 +104,43 @@ async def test_final_check_ignores_nonexistent_reference_the_user_asked_about(re
     assert issues == []
     still = await final_check("Veja também João 1:98.", PassageService(repo), repo, user_text="O que diz João 1:99?")
     assert [i.excerpt for i in still] == ["João 1:98"]
+
+
+async def test_timeline_marker_validates_sections(proc: MarkerStreamProcessor) -> None:
+    from app.application.verification.markers import TimelineOut
+
+    out = await proc.feed("Veja:\n[[linha:Sl 2|1-3=Primeira parte;4-6=Segunda") + await proc.feed(
+        " parte;5-9=Fora do capítulo]]\n"
+    )
+    out += await proc.flush()
+    timeline = next(o for o in out if isinstance(o, TimelineOut))
+    assert timeline.reference == "Sl 2"
+    assert timeline.sections == [
+        {"start": 1, "end": 3, "title": "Primeira parte"},
+        {"start": 4, "end": 6, "title": "Segunda parte"},
+    ]
+    assert prose(out) == "Veja:\n\n"
+
+
+async def test_timeline_with_no_valid_section_is_invalid(proc: MarkerStreamProcessor) -> None:
+    out = await proc.feed("[[linha:Sl 2|7-9=Nada]]") + await proc.flush()
+    assert [type(o).__name__ for o in out] == ["InvalidRefOut"]
+
+
+async def test_map_marker_without_places_is_dropped(proc: MarkerStreamProcessor) -> None:
+    out = await proc.feed("A[[mapa:Sl 2]]B") + await proc.flush()
+    assert prose(out) == "AB" and len(out) == 2
+
+
+async def test_map_marker_with_places(proc: MarkerStreamProcessor, bible_db) -> None:  # type: ignore[no-untyped-def]
+    from sqlalchemy import text
+
+    from app.application.verification.markers import MapOut
+
+    await bible_db.execute(text("INSERT INTO places VALUES ('p1', 'Philippi', 'Filipos', 'settlement', 24.28, 41.01)"))
+    await bible_db.execute(text("INSERT INTO place_verses (place_id, book_id, chapter, verse) VALUES ('p1', 50, 2, 3)"))
+    out = await proc.feed("[[mapa:Fp 2]]") + await proc.flush()
+    card = next(o for o in out if isinstance(o, MapOut))
+    assert card.reference == "Fp 2" and card.places == [
+        {"name": "Filipos", "kind": "settlement", "lon": 24.28, "lat": 41.01, "verses": [3]}
+    ]

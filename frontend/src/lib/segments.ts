@@ -11,6 +11,10 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
       return [...segments, { type: "verse", marker: ev.data.marker, passage: ev.data.passage }];
     case "invalid_reference":
       return [...segments, { type: "invalid_reference", marker: ev.data.marker }];
+    case "timeline":
+      return [...segments, { type: "timeline", ...ev.data }];
+    case "map":
+      return [...segments, { type: "map", ...ev.data }];
     case "issues":
       return [...segments, ...ev.data.items.map((i) => ({ type: "issue" as const, ...i }))];
     case "crisis":
@@ -22,7 +26,11 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
   }
 }
 
-export type Block = { kind: "markdown"; markdown: string } | { kind: "card"; index: number };
+export type Block =
+  | { kind: "markdown"; markdown: string }
+  | { kind: "card"; index: number }
+  | { kind: "timeline"; index: number }
+  | { kind: "map"; index: number };
 
 function isInline(segments: Segment[], i: number): boolean {
   const prev = segments[i - 1];
@@ -41,6 +49,10 @@ export function toBlocks(segments: Segment[]): Block[] {
   };
   segments.forEach((segment, i) => {
     if (segment.type === "text") markdown += segment.text;
+    else if (segment.type === "timeline" || segment.type === "map") {
+      flush();
+      blocks.push({ kind: segment.type, index: i });
+    }
     else if (segment.type === "invalid_reference") markdown += `[⚠ referência não encontrada](#x${i})`;
     else if (segment.type === "verse") {
       if (isInline(segments, i)) markdown += `[${segment.passage.reference}](#v${i})`;

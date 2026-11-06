@@ -58,3 +58,12 @@ class LexiconEntry:
 class CrossReference:
     target: VerseRange
     votes: int
+
+
+@dataclass(frozen=True)
+class Place:
+    name: str
+    kind: str
+    lon: float
+    lat: float
+    verses: list[int]

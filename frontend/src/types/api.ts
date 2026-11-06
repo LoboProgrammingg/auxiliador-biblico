@@ -25,8 +25,24 @@ export type IssueKind =
   | "teologia_investimento"
   | "teologia_condenacao";
 
+export interface TimelineSection {
+  start: number;
+  end: number;
+  title: string;
+}
+
+export interface MapPlace {
+  name: string;
+  kind: string;
+  lon: number;
+  lat: number;
+  verses: number[];
+}
+
 export type Segment =
   | { type: "text"; text: string }
+  | { type: "timeline"; marker: string; reference: string; book: string; sections: TimelineSection[] }
+  | { type: "map"; marker: string; reference: string; places: MapPlace[] }
   | { type: "verse"; marker: string; passage: Passage }
   | { type: "invalid_reference"; marker: string }
   | { type: "issue"; kind: IssueKind; excerpt: string; marker?: string }
@@ -37,6 +53,8 @@ export type ChatEvent =
   | { event: "text"; data: { text: string } }
   | { event: "verse"; data: { marker: string; passage: Passage } }
   | { event: "invalid_reference"; data: { marker: string } }
+  | { event: "timeline"; data: { marker: string; reference: string; book: string; sections: TimelineSection[] } }
+  | { event: "map"; data: { marker: string; reference: string; places: MapPlace[] } }
   | { event: "status"; data: { label: string } }
   | { event: "memory_saved"; data: { topic: string } }
   | { event: "crisis"; data: { numero: string; url: string } }
@@ -87,4 +105,10 @@ export interface OriginalWord {
 export interface CrossRef {
   reference: string;
   votes: number;
+}
+
+export interface DailyWord {
+  day: string;
+  reference: string | null;
+  segments: Segment[];
 }

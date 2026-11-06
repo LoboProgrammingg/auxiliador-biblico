@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { applyEvent } from "@/lib/segments";
 import { api, sendMessage } from "@/services/api";
-import type { Segment, StoredMessage } from "@/types/api";
+import type { DailyWord, Segment, StoredMessage } from "@/types/api";
 
 export interface UiMessage {
   key: string;
@@ -16,7 +16,16 @@ export interface PopupTarget {
   translation: string;
 }
 
+export type DailyState =
+  | { status: "idle" }
+  | { status: "loading" }
+  | { status: "ready"; word: DailyWord }
+  | { status: "error"; message: string };
+
 interface ChatState {
+  daily: DailyState;
+  loadDailyWord: () => Promise<void>;
+  closeDailyWord: () => void;
   conversationId: string | null;
   messages: UiMessage[];
   loading: boolean;
@@ -42,6 +51,20 @@ export const useChat = create<ChatState>((set, get) => ({
   streaming: false,
   status: null,
   popup: null,
+  daily: { status: "idle" },
+
+  loadDailyWord: async () => {
+    if (get().daily.status === "loading") return;
+    set({ daily: { status: "loading" } });
+    try {
+      set({ daily: { status: "ready", word: await api.dailyWord() } });
+    } catch (e) {
+      const message = e instanceof Error && e.message ? e.message : "Não consegui preparar a palavra de hoje.";
+      set({ daily: { status: "error", message } });
+    }
+  },
+
+  closeDailyWord: () => set({ daily: { status: "idle" } }),
 
   select: async (id) => {
     if (get().streaming) return;

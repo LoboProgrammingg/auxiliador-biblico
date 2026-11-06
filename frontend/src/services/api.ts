@@ -1,6 +1,7 @@
 import { parseSSE } from "@/lib/sse";
 import type {
   ChatEvent,
+  DailyWord,
   CompareItem,
   ConversationSummary,
   CrossRef,
@@ -23,7 +24,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: { "Content-Type": "application/json", ...(init?.headers ?? {}) },
   });
-  if (!response.ok) throw new ApiError(response.status, `Erro ${response.status} em ${path}`);
+  if (!response.ok) {
+    const detail = await response.json().then((b: { detail?: unknown }) => b.detail).catch(() => undefined);
+    throw new ApiError(response.status, typeof detail === "string" ? detail : `Erro ${response.status} em ${path}`);
+  }
   return (response.status === 204 ? undefined : await response.json()) as T;
 }
 
@@ -43,6 +47,7 @@ export const api = {
   original: (ref: string) => request<{ reference: string; words: OriginalWord[] }>(`/bible/original?${q({ ref })}`),
   crossReferences: (ref: string) =>
     request<{ reference: string; items: CrossRef[] }>(`/bible/cross-references?${q({ ref, limit: 10 })}`),
+  dailyWord: () => request<DailyWord>("/daily-word", { method: "POST" }),
   memories: () => request<{ items: MemoryItem[] }>("/memories").then((r) => r.items),
   saveMemory: (topic: string, content: string) =>
     request<{ topic: string }>(`/memories/${encodeURIComponent(topic)}`, {

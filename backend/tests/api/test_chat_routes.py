@@ -77,3 +77,11 @@ async def test_health_reports_agent_mode(api: httpx.AsyncClient, monkeypatch) ->
     assert body["status"] == "ok" and body["agente"] == "assinatura_local"
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-x")
     assert (await api.get("/api/v1/health")).json()["agente"] == "chave_paga_bloqueada"
+
+
+async def test_daily_word_route_returns_same_word_twice(api: httpx.AsyncClient) -> None:
+    first = await api.post("/api/v1/daily-word")
+    assert first.status_code == 200
+    body = first.json()
+    assert body["reference"] == "Fp 2:3" and [s["type"] for s in body["segments"]] == ["text", "verse"]
+    assert (await api.post("/api/v1/daily-word")).json() == body

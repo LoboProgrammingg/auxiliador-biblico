@@ -4,6 +4,7 @@ from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
 from app.api.v1.bible.router import router as bible_router
 from app.api.v1.chat.router import router as chat_router
+from app.api.v1.daily.router import router as daily_router
 from app.api.v1.health.router import router as health_router
 from app.api.v1.memory.router import router as memory_router
 from app.core.config import get_settings
@@ -24,6 +25,7 @@ def create_app() -> FastAPI:
     app.include_router(bible_router, prefix="/api/v1")
     app.include_router(memory_router, prefix="/api/v1")
     app.include_router(chat_router, prefix="/api/v1")
+    app.include_router(daily_router, prefix="/api/v1")
     return app
 
 
