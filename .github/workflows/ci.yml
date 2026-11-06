@@ -42,6 +42,12 @@ jobs:
       - uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
         with:
           python-version: "3.12"
+      - name: Cliente PostgreSQL 16 (mesma versão do servidor, para pg_dump/pg_restore)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q postgresql-client-16
+          echo /usr/lib/postgresql/16/bin >> "$GITHUB_PATH"
+      - run: pg_dump --version
       - run: uv sync --locked
       - run: uv run ruff check .
       - run: uv run ruff format --check .
