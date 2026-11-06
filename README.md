@@ -158,8 +158,19 @@ Issues e pull requests são bem-vindos. Antes de enviar:
 - mantenha a regra nº 1: nenhum texto bíblico no repositório e nenhum versículo escrito pelo modelo sem passar pelo banco;
 - o pre-commit com [gitleaks](https://github.com/gitleaks/gitleaks) bloqueia segredos (`pre-commit install`).
 
+## Autor
+
+**Matheus Lobo** é engenheiro de software, CTO e cofundador da
+[WebFrete](https://webfrete.com/autores/matheus). Trabalha com Python, FastAPI, TypeScript,
+Next.js e PostgreSQL, com foco em arquitetura de software e Domain-Driven Design.
+
+- GitHub: [@LoboProgrammingg](https://github.com/LoboProgrammingg)
+- LinkedIn: [Matheus Lobo](https://www.linkedin.com/in/matheuslobocamara)
+- WebFrete: [webfrete.com](https://webfrete.com/autores/matheus)
+- Outros projetos: [Boas Práticas de Engenharia](https://github.com/LoboProgrammingg/boas-praticas-de-engenharia) e [DDD-Structure](https://github.com/LoboProgrammingg/DDD-Structure)
+
 ## Licença
 
-Código sob [MIT](LICENSE). Os dados bíblicos seguem as licenças das fontes acima.
+Código sob [MIT](LICENSE) © Matheus Lobo Camara. Os dados bíblicos seguem as licenças das fontes acima.
 
 > Se você está pensando em se ferir, ligue para o **CVV: 188** (gratuito, 24 horas) ou acesse [cvv.org.br](https://cvv.org.br).
