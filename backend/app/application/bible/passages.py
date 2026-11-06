@@ -1,4 +1,4 @@
-from app.domain.bible.entities import Place, ResolvedPassage
+from app.domain.bible.entities import Person, Place, ResolvedPassage
 from app.domain.bible.errors import InvalidReference
 from app.domain.bible.references import VerseRange, format_reference, parse_reference
 from app.domain.bible.repositories import BibleRepository
@@ -84,3 +84,15 @@ class PassageService:
 
     async def places(self, r: VerseRange) -> list[Place]:
         return await self._repo.places_in_chapter(r.book_id, r.chapter)
+
+    async def people(self, r: VerseRange) -> list[Person]:
+        return await self._repo.people_in_range(r.book_id, r.chapter, r.chapter)
+
+    async def links(self, r: VerseRange, limit: int) -> list[tuple[int, VerseRange, int]]:
+        return await self._repo.chapter_links(r.book_id, r.chapter, limit)
+
+    async def book_sizes(self) -> dict[int, int]:
+        sizes: dict[int, int] = {}
+        for (book, _chapter), n in (await self._repo.chapter_sizes()).items():
+            sizes[book] = sizes.get(book, 0) + n
+        return sizes

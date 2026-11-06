@@ -13,14 +13,17 @@ from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentT
 from app.application.chat.tools import STATUS, ToolExecutor, ToolOutcome, allowed_tool_names, build_mcp_server
 from app.application.judgments.crisis import detect_crisis
 from app.application.judgments.service import CRISIS_THRESHOLD, JudgmentService, sentence_after, triage_block
+from app.application.verification.facts import check_facts
 from app.application.verification.final_check import final_check
 from app.application.verification.markers import (
     ChiasmOut,
     InvalidRefOut,
     MapOut,
     MarkerStreamProcessor,
+    RouteOut,
     StreamOut,
     TextOut,
+    ThreadOut,
     TimelineOut,
     VerseOut,
 )
@@ -69,6 +72,7 @@ class _Turn:
         return event
 
     def add(self, out: StreamOut) -> ChatEvent | None:
+        payload: dict[str, Any]
         if isinstance(out, TextOut):
             if not out.text:
                 return None
@@ -83,7 +87,7 @@ class _Turn:
             self.segments.append({"type": "verse", **payload})
             return ChatEvent("verse", payload)
         if isinstance(out, TimelineOut):
-            payload: dict[str, Any] = {
+            payload = {
                 "marker": out.marker,
                 "reference": out.reference,
                 "book": out.book,
@@ -99,6 +103,14 @@ class _Turn:
             payload = {"marker": out.marker, "reference": out.reference, "book": out.book, "parts": out.parts}
             self.segments.append({"type": "chiasm", **payload})
             return ChatEvent("chiasm", payload)
+        if isinstance(out, RouteOut):
+            payload = {"marker": out.marker, "reference": out.reference, "legs": out.legs}
+            self.segments.append({"type": "route", **payload})
+            return ChatEvent("route", payload)
+        if isinstance(out, ThreadOut):
+            payload = {"marker": out.marker, "reference": out.reference, "links": out.links, "books": out.books}
+            self.segments.append({"type": "thread", **payload})
+            return ChatEvent("thread", payload)
         assert isinstance(out, InvalidRefOut)
         self.segments.append({"type": "invalid_reference", "marker": out.marker})
         return ChatEvent("invalid_reference", {"marker": out.marker})
@@ -122,11 +134,12 @@ class ChatService:
         self._judgments = judgments or JudgmentService(None)
         self._timeout_s, self._study_effort = timeout_s, study_effort
 
-    async def _review(self, turn: "_Turn", user_text: str) -> list[dict[str, str]]:
+    async def _review(self, turn: "_Turn", user_text: str) -> list[dict[str, Any]]:
         """Checagens após a resposta: texto (determinístico), teologia e fidelidade (Jev)."""
         issues = await final_check("".join(turn.prose), self._passages, self._repo, user_text)
-        items = [{"kind": i.kind, "excerpt": i.excerpt} for i in issues]
+        items: list[dict[str, Any]] = [{"kind": i.kind, "excerpt": i.excerpt} for i in issues]
         items += await self._judgments.guard_issues("".join(turn.prose))
+        items += await check_facts("".join(turn.prose), self._repo, self._judgments)
         pairs: list[tuple[str, str, str]] = []
         for current, following in zip(turn.segments, turn.segments[1:], strict=False):
             if current["type"] == "verse" and following["type"] == "text":

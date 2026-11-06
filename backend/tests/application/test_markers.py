@@ -121,7 +121,7 @@ async def test_timeline_marker_validates_sections(proc: MarkerStreamProcessor) -
     out += await proc.flush()
     timeline = next(o for o in out if isinstance(o, TimelineOut))
     assert timeline.reference == "Sl 2"
-    assert timeline.sections == [
+    assert [{k: s[k] for k in ("start", "end", "title")} for s in timeline.sections] == [
         {"start": 1, "end": 3, "title": "Primeira parte"},
         {"start": 4, "end": 6, "title": "Segunda parte"},
     ]

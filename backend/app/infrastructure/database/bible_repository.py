@@ -207,3 +207,59 @@ class SqlBibleRepository(BibleRepository):
             {"s": strong},
         )
         return [(b, n) for b, n in result.all()]
+
+    async def geo_features(
+        self, west: float, south: float, east: float, north: float
+    ) -> list[tuple[str, str | None, list[list[float]]]]:
+        result = await self._session.execute(
+            text(
+                "SELECT kind, name, points FROM geo_features "
+                "WHERE max_lon >= :w AND min_lon <= :e AND max_lat >= :s AND min_lat <= :n "
+                "ORDER BY CASE kind WHEN 'land' THEN 0 WHEN 'river' THEN 1 ELSE 2 END, id"
+            ),
+            {"w": west, "e": east, "s": south, "n": north},
+        )
+        return [(k, n, p) for k, n, p in result.all()]
+
+    async def chapter_links(self, book_id: int, chapter: int, limit: int) -> list[tuple[int, VerseRange, int]]:
+        """Referências cruzadas do capítulo para o outro Testamento, as mais votadas primeiro."""
+        result = await self._session.execute(
+            text(
+                "SELECT DISTINCT ON (to_book, to_chapter_start, to_verse_start) from_verse, to_book, "
+                "to_chapter_start, to_verse_start, votes FROM cross_references "
+                "WHERE from_book = :b AND from_chapter = :c AND (to_book < 40) <> (:b < 40) "
+                "ORDER BY to_book, to_chapter_start, to_verse_start, votes DESC"
+            ),
+            {"b": book_id, "c": chapter},
+        )
+        rows = sorted(result.all(), key=lambda r: -r[4])[:limit]
+        return [(fv, VerseRange(tb, tc, tv, tv), votes) for fv, tb, tc, tv, votes in rows]
+
+    async def people_named(self, names: list[str]) -> list[tuple[str, str]]:
+        result = await self._session.execute(
+            text(
+                "SELECT id, COALESCE(name_pt, name_en) FROM people "
+                "WHERE COALESCE(name_pt, name_en) = ANY(:n) OR split_part(name_pt, ' (', 1) = ANY(:n)"
+            ),
+            {"n": names},
+        )
+        return [(i, n) for i, n in result.all()]
+
+    async def strong_stats(self, strong: str) -> tuple[int, int, list[int]]:
+        """Ocorrências, versículos distintos e livros (em ordem canônica) de uma palavra do original."""
+        result = await self._session.execute(
+            text(
+                "SELECT count(*), count(DISTINCT (book_id, chapter, verse)), "
+                "COALESCE(array_agg(DISTINCT book_id ORDER BY book_id), '{}') "
+                "FROM original_words WHERE strong = :s AND verse > 0"
+            ),
+            {"s": strong},
+        )
+        total, verses, books = result.one()
+        return int(total), int(verses), list(books)
+
+    async def person_names(self, ids: list[str]) -> dict[str, str]:
+        result = await self._session.execute(
+            text("SELECT id, COALESCE(name_pt, name_en) FROM people WHERE id = ANY(:ids)"), {"ids": ids}
+        )
+        return {i: n for i, n in result.all()}

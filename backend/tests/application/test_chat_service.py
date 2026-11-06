@@ -270,3 +270,26 @@ async def test_opinion_request_adds_opinion_block(bible_db: AsyncSession) -> Non
     await collect(svc, await new_conversation(bible_db), "O que a Bíblia diz sobre ser sal da terra?")
     assert "[Pedido de opinião" in runner.calls[0]["prompt"] and runner.calls[0]["effort"] == "high"
     assert "[Pedido de opinião" not in runner.calls[1]["prompt"]
+
+
+async def test_wrong_fact_becomes_issue_with_correction(bible_db: AsyncSession) -> None:
+    from sqlalchemy import text as sql
+
+    for pid, name in (("ruth", "Rute"), ("obed", "Obede"), ("jesse", "Jessé"), ("david", "Davi")):
+        await bible_db.execute(
+            sql("INSERT INTO people (id, name_en, name_pt) VALUES (:i, :n, :n)"), {"i": pid, "n": name}
+        )
+    for child, parent in (("obed", "ruth"), ("jesse", "obed"), ("david", "jesse")):
+        await bible_db.execute(
+            sql("INSERT INTO person_relations (person_id, kind, other_id) VALUES (:c, 'pai_mae', :p)"),
+            {"c": child, "p": parent},
+        )
+    runner = FakeAgentRunner(["Rute foi avó do rei Davi. Que história linda."])
+    cid = await new_conversation(bible_db)
+    events = await collect(make_service(bible_db, runner), cid, "Quem era Rute?")
+    items = next(e for e in events if e.name == "issues").data["items"]
+    assert [(i["kind"], i["correction"]) for i in items] == [
+        ("fato_nao_confere", "Pela base de famílias (STEPBible): Rute → Obede → Jessé → Davi.")
+    ]
+    stored = (await SqlConversationRepository(bible_db).messages(cid))[-1]
+    assert any(s["type"] == "issue" and s.get("correction") for s in stored.segments)

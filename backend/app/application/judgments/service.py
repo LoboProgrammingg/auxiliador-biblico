@@ -4,13 +4,14 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.application.judgments.ports import Judge, JudgeAnswers, JudgeUnavailable, Question
-from app.application.judgments.questions import FIDELITY, GUARD, GUARD_KINDS, SENSITIVE, TRIAGE
+from app.application.judgments.questions import FACT, FIDELITY, GUARD, GUARD_KINDS, SENSITIVE, TRIAGE
 
 logger = logging.getLogger(__name__)
 CRISIS_THRESHOLD = 0.5
 GUARD_THRESHOLD = 0.7
 FIDELITY_CONFIDENCE = 0.8
 SENSITIVE_THRESHOLD = 0.7
+FACT_CONFIDENCE = 0.7
 _CPF = re.compile(r"\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b")
 _CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
 _SENTENCE = re.compile(r"^\s*([^\s,;:].*?[.!?])(?:\s|$)", re.S)
@@ -22,6 +23,13 @@ class Triage:
     moment: str
     moment_confidence: float
     distress: float
+
+
+@dataclass(frozen=True)
+class FactClaim:
+    kind: str
+    relation: str | None
+    occurrences: str | None
 
 
 @dataclass(frozen=True)
@@ -92,3 +100,20 @@ class JudgmentService:
             return True
         answers = await self._ask({"conteudo": content}, dict(SENSITIVE))
         return answers is not None and answers.nouls.get("sensivel", 0.0) >= SENSITIVE_THRESHOLD
+
+    async def classify_fact(self, sentence: str, person_a: str | None, person_b: str | None) -> FactClaim | None:
+        """Jev diz que tipo de fato a frase afirma; None = Jev indisponível (quem chama usa o plano B)."""
+        state = {"frase": sentence, "pessoa_a": person_a or "", "pessoa_b": person_b or ""}
+        answers = await self._ask(state, dict(FACT))
+        if answers is None:
+            return None
+        kind, confidence = answers.choices.get("tipo", ("outra", 0.0))
+        if confidence < FACT_CONFIDENCE or kind == "outra":
+            return FactClaim("outra", None, None)
+        relation, rel_conf = answers.choices.get("parentesco", ("nenhum", 0.0))
+        occurrences, occ_conf = answers.choices.get("ocorrencias", ("nao_afirma", 0.0))
+        return FactClaim(
+            kind,
+            relation if rel_conf >= FACT_CONFIDENCE else None,
+            occurrences if occ_conf >= FACT_CONFIDENCE else None,
+        )

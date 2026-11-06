@@ -32,6 +32,7 @@ export function PrintAnswer({ segments, prefix }: { segments: Segment[]; prefix:
   const crisis = segments.find((s) => s.type === "crisis");
   const errors = segments.filter((s): s is Extract<Segment, { type: "error" }> => s.type === "error");
   const issues = segments.filter((s) => s.type === "issue").length;
+  const corrections = segments.flatMap((s) => (s.type === "issue" && s.correction ? [s.correction] : []));
   return (
     <div className="resposta-impressa">
       {crisis && (
@@ -80,6 +81,7 @@ export function PrintAnswer({ segments, prefix }: { segments: Segment[]; prefix:
         return null;
       })}
       {errors.map((e, i) => <p key={`e${i}`} className="aviso">{e.message}</p>)}
+      {corrections.map((c, i) => <p key={`c${i}`} className="aviso">Correção da conferência automática: {c}</p>)}
       {issues > 0 && (
         <p className="aviso">A conferência automática marcou {issues} ponto(s) desta resposta para revisar.</p>
       )}

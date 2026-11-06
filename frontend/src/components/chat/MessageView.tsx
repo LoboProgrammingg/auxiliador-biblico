@@ -17,11 +17,12 @@ const ISSUE_LABEL: Record<IssueKind, string> = {
   teologia_prosperidade: "Possível promessa de prosperidade em troca de fé ou oferta",
   teologia_investimento: "Indicação de investimento específico",
   teologia_condenacao: "Tom de condenação em vez de chamado à graça",
+  fato_nao_confere: "Fato que não confere com a base",
 };
 
 export function CrisisCard({ numero, url }: { numero: string; url: string }) {
   return (
-    <aside role="alert" className="mb-5 max-w-[68ch] rounded-md border-2 border-vinho bg-pergaminho-claro px-5 py-4">
+    <aside role="alert" className="mb-5 rounded-md border-2 border-vinho bg-pergaminho-claro px-5 py-4">
       <p className="font-escritura text-lg font-bold text-vinho">Você não está sozinho. Sua vida importa.</p>
       <p className="mt-1 leading-relaxed">
         Se você está pensando em se machucar ou em não continuar, ligue agora para o CVV no{" "}
@@ -38,7 +39,7 @@ function Issues({ segments }: { segments: Segment[] }) {
   const issues = segments.filter((s): s is Extract<Segment, { type: "issue" }> => s.type === "issue");
   if (!issues.length) return null;
   return (
-    <div className="mt-4 max-w-[68ch] rounded border border-vinho/40 bg-vinho/5 px-4 py-3 text-sm text-vinho">
+    <div className="mt-4 rounded border border-vinho/40 bg-vinho/5 px-4 py-3 text-sm text-vinho">
       <p className="font-bold">A conferência automática encontrou pontos para revisar:</p>
       <ul className="mt-1 list-disc pl-5">
         {issues.map((issue, i) => (
@@ -46,6 +47,7 @@ function Issues({ segments }: { segments: Segment[] }) {
             {ISSUE_LABEL[issue.kind]}
             {issue.kind !== "teologia_prosperidade" && issue.kind !== "teologia_investimento" &&
               issue.kind !== "teologia_condenacao" && <span className="text-tinta-suave">: {issue.excerpt}</span>}
+            {issue.correction && <span className="block font-bold text-oliva">{issue.correction}</span>}
           </li>
         ))}
       </ul>
@@ -127,14 +129,14 @@ export function MessageView({ message }: { message: UiMessage }) {
         <p key={i} className="mt-2 text-sm text-oliva">🧠 Lembrei: {m.topic.replaceAll("-", " ")}</p>
       ))}
       {errors.map((e, i) => (
-        <p key={i} role="status" className="mt-3 max-w-[68ch] text-sm font-bold text-vinho">{e.message}</p>
+        <p key={i} role="status" className="mt-3 text-sm font-bold text-vinho">{e.message}</p>
       ))}
       {message.status === "interrompida" && (
-        <p className="mt-3 max-w-[68ch] text-sm text-tinta-suave italic">
+        <p className="mt-3 text-sm text-tinta-suave italic">
           Esta resposta foi interrompida porque o servidor reiniciou. Envie a pergunta de novo para receber a resposta completa.
         </p>
       )}
-      {message.error && <p className="mt-3 max-w-[68ch] text-sm font-bold text-vinho">{message.error}</p>}
+      {message.error && <p className="mt-3 text-sm font-bold text-vinho">{message.error}</p>}
       <Issues segments={message.segments} />
     </article>
   );

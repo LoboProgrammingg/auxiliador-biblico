@@ -15,14 +15,14 @@ describe("outline", () => {
   test("questions are sections and markdown headings are subsections", () => {
     const items = outline([
       msg("user", "Interprete João 1"),
-      msg("assistant", null, [{ type: "text", text: "Intro\n## 1. O Verbo (v. 1-18)\ntexto\n### Detalhe\n```\n## não é título\n```\n" }]),
+      msg("assistant", null, [{ type: "text", text: "Intro\n## 1. O Verbo (v. 1-18)\ntexto\n### Detalhe\n```\n## não é título\n```\n## 2. Testemunho\n" }]),
       msg("user", "E o versículo 14?"),
       msg("assistant", null, [{ type: "text", text: "sem títulos" }]),
     ]);
     expect(items).toEqual([
       { id: "q1", title: "Interprete João 1", level: 1 },
       { id: "q1-h1", title: "1. O Verbo (v. 1-18)", level: 2 },
-      { id: "q1-h2", title: "Detalhe", level: 2 },
+      { id: "q1-h3", title: "2. Testemunho", level: 2 },
       { id: "q2", title: "E o versículo 14?", level: 1 },
     ]);
   });

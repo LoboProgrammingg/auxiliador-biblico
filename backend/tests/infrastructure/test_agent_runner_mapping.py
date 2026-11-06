@@ -74,3 +74,28 @@ def test_runner_effort_override(tmp_path) -> None:  # type: ignore[no-untyped-de
     tools = AgentTools({}, ["WebSearch"], None)  # type: ignore[arg-type]
     assert runner._options(None, tools).effort == "medium"
     assert runner._options(None, tools, "high").effort == "high"
+
+
+def test_runner_loads_only_the_bundled_illustration_skill(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from pathlib import Path
+
+    from app.application.chat.ports import AgentTools
+    from app.infrastructure.external.agent_sdk.runner import PLUGIN_DIR, SKILLS, ClaudeAgentRunner
+
+    options = ClaudeAgentRunner("m", "medium", tmp_path, False)._options(None, AgentTools({}, ["WebSearch"], None))  # type: ignore[arg-type]
+    assert options.setting_sources == []
+    assert options.plugins == [{"type": "local", "path": str(PLUGIN_DIR)}]
+    assert options.skills == SKILLS == ["auxiliador-biblico:ilustracoes"]
+    skill = Path(PLUGIN_DIR) / "skills" / "ilustracoes" / "SKILL.md"
+    body = skill.read_text(encoding="utf-8")
+    assert body.startswith("---\nname: ilustracoes\n")
+    for marker in ("[[linha:", "[[mapa:", "[[rota:", "[[quiasmo:", "[[fio:"):
+        assert marker in body
+
+
+def test_system_prompt_points_to_the_skill_instead_of_carrying_it() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "ilustracoes" in SYSTEM_PROMPT
+    for marker in ("[[linha:", "[[mapa:", "[[quiasmo:", "[[rota:"):
+        assert marker not in SYSTEM_PROMPT

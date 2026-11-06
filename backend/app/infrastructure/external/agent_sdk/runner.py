@@ -16,6 +16,8 @@ from app.application.chat.ports import AgentDone, AgentEvent, AgentText, AgentTo
 from app.application.chat.prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
+PLUGIN_DIR = Path(__file__).resolve().parents[4] / "agente-plugin"
+SKILLS = ["auxiliador-biblico:ilustracoes"]
 BLOCKED_BUILTINS = ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "NotebookEdit", "Task", "TodoWrite", "WebFetch"]
 
 
@@ -57,6 +59,8 @@ class ClaudeAgentRunner:
             effort=effort or self._effort,  # type: ignore[arg-type]
             system_prompt=SYSTEM_PROMPT,
             setting_sources=[],
+            plugins=[{"type": "local", "path": str(PLUGIN_DIR)}],
+            skills=SKILLS,
             cwd=str(self._workdir),
             mcp_servers={"biblia": tools.server},
             strict_mcp_config=True,

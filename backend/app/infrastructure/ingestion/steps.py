@@ -12,6 +12,7 @@ from app.infrastructure.external.voyage.client import voyage_from_settings
 from app.infrastructure.ingestion.alignment import semantic_alignment
 from app.infrastructure.ingestion.checks import check_original_coverage
 from app.infrastructure.ingestion.crossrefs import load_crossrefs, read_crossref_zip
+from app.infrastructure.ingestion.geography import NE_BASE, NE_FILES, load_geography
 from app.infrastructure.ingestion.passages import create_passages, embed_passages
 from app.infrastructure.ingestion.people import TIPNR_URL, load_people
 from app.infrastructure.ingestion.places import PLACES_URL, load_places
@@ -131,6 +132,14 @@ async def step_people(session: AsyncSession) -> dict[str, Any]:
     return {"pessoas": await load_people(session, path)}
 
 
+async def step_geography(session: AsyncSession) -> dict[str, Any]:
+    folder = get_settings().data_dir / "sources" / "naturalearth"
+    paths = {
+        kind: await download(f"{NE_BASE}/{name}.geojson", folder / f"{name}.geojson") for kind, name in NE_FILES.items()
+    }
+    return {"feicoes": await load_geography(session, paths)}
+
+
 STEPS: dict[str, Step] = {
     "download": step_download,
     "translations": step_translations,
@@ -138,6 +147,7 @@ STEPS: dict[str, Step] = {
     "crossrefs": step_crossrefs,
     "places": step_places,
     "people": step_people,
+    "geography": step_geography,
     "passages": step_passages,
     "alignment": step_alignment,
 }

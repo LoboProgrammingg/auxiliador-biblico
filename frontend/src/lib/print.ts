@@ -9,21 +9,21 @@ export interface OutlineItem {
 const HEADING = /^(#{1,3})\s+(.+?)\s*#*\s*$/;
 
 /** Títulos de markdown (h1–h3) fora de blocos de código, com a linha (1-based) em que aparecem. */
-export function headingLines(markdown: string): { line: number; title: string }[] {
-  const found: { line: number; title: string }[] = [];
+export function headingLines(markdown: string): { line: number; title: string; level: number }[] {
+  const found: { line: number; title: string; level: number }[] = [];
   let fenced = false;
   markdown.split("\n").forEach((text, i) => {
     if (text.trim().startsWith("```")) fenced = !fenced;
     else if (!fenced) {
       const match = HEADING.exec(text);
-      if (match) found.push({ line: i + 1, title: match[2] });
+      if (match) found.push({ line: i + 1, title: match[2], level: match[1].length });
     }
   });
   return found;
 }
 
-export function markdownHeadings(markdown: string): string[] {
-  return headingLines(markdown).map((h) => h.title);
+export function markdownHeadings(markdown: string): { title: string; level: number }[] {
+  return headingLines(markdown).map(({ title, level }) => ({ title, level }));
 }
 
 const answerText = (segments: Segment[] | null) =>
@@ -38,9 +38,9 @@ export function outline(messages: StoredMessage[]): OutlineItem[] {
       const title = (m.text ?? "").trim();
       items.push({ id: `q${question}`, title: title.length > 90 ? `${title.slice(0, 87)}…` : title, level: 1 });
     } else if (question > 0) {
-      markdownHeadings(answerText(m.segments)).forEach((title, k) =>
-        items.push({ id: `q${question}-h${k + 1}`, title, level: 2 }),
-      );
+      markdownHeadings(answerText(m.segments)).forEach(({ title, level }, k) => {
+        if (level <= 2) items.push({ id: `q${question}-h${k + 1}`, title, level: 2 });
+      });
     }
   }
   return items;

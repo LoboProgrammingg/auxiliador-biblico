@@ -15,7 +15,7 @@ E um botão **✨ Uma palavra pra mim**: uma palavra de consolo por dia, escolhi
 | | |
 |---|---|
 | **Citação verificada** | O modelo não digita versículos. Ele aponta a referência (`[[Fp 4:6]]`) e o sistema troca pelo texto do banco. Referência inexistente nunca vira cartão. |
-| **Conferência em camadas** | Código confere toda referência e toda citação entre aspas; o Jev confere se a interpretação contradiz o versículo e se há promessa de prosperidade, indicação de investimento ou tom condenatório. |
+| **Conferência em camadas** | Código confere toda referência e toda citação entre aspas; o Jev confere se a interpretação contradiz o versículo e se há promessa de prosperidade, indicação de investimento ou tom condenatório. Fatos em volta do texto também são conferidos: o Jev identifica afirmações de parentesco ("Rute foi avó de Davi") e de ocorrências de palavras do original ("só aparece aqui"), e o sistema confere nas famílias do STEPBible e no texto original, mostrando a correção. |
 | **Original palavra por palavra** | Hebraico, aramaico e grego koiné com transliteração, número Strong, morfologia e léxico (STEPBible). |
 | **Concordância do original** | Mostra onde a mesma palavra hebraica ou grega aparece em outros versículos. |
 | **18 traduções** | VFL (padrão, fácil de ler), NVT, ACF, ARA, NAA e outras, com comparação explicada pelo original. |
@@ -86,7 +86,7 @@ scripts/api.sh           # sobe a API (deixe este terminal aberto)
 
 Abra **http://127.0.0.1:3000**.
 
-A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `places`, `people`, `passages`, `alignment`.
+A ingestão pode ser interrompida e retomada: rode `cd backend && uv run python -m app.infrastructure.ingestion all` de novo e ela continua de onde parou. Etapas: `download`, `translations`, `originals`, `crossrefs`, `places`, `people`, `geography`, `passages`, `alignment`.
 
 Tudo escuta só em `127.0.0.1`: nada fica exposto na rede.
 
@@ -127,6 +127,7 @@ scripts/restaurar.sh data/backups/biblia-AAAA-MM-DD.dump   # restaura (antes gua
 | Referências cruzadas | [OpenBible.info](https://www.openbible.info/labs/cross-references/) | CC BY |
 | Lugares bíblicos com coordenadas (mapas) | [OpenBible.info Bible Geocoding Data](https://github.com/openbibleinfo/Bible-Geocoding-Data) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
 | Pessoas e famílias (árvores genealógicas) | [STEPBible TIPNR](https://github.com/STEPBible/STEPBible-Data) — Tyndale House Cambridge | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) |
+| Costa, rios e mares (mapas) | [Natural Earth](https://www.naturalearthdata.com) | Domínio público |
 
 **Conferência da base (medida na ingestão):**
 - 18 traduções carregadas. As edições Ave-Maria, Pastoral e Matos Soares ficaram de fora porque numeram Malaquias com 3 capítulos.
