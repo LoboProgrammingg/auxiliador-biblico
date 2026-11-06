@@ -94,8 +94,9 @@ SPECS: dict[str, tuple[str, dict[str, Any]]] = {
         _obj({"topico": {"type": "string", "minLength": 1}}, ["topico"]),
     ),
     "pesquisar_web_serper": (
-        "Pesquisa na web (Google) para contexto histórico, cultural ou arqueológico. Nunca use como fonte de texto "
-        "bíblico. Cite sempre o link.",
+        "Pesquisa na web (Google): interpretações de estudiosos e tradições, contexto histórico, cultural ou "
+        "arqueológico. No máximo 8 pesquisas por resposta; mostra quantas fontes você já reuniu. Nunca use como "
+        "fonte de texto bíblico. Cite sempre o link.",
         _obj({"consulta": _STR}, ["consulta"]),
     ),
 }
@@ -134,6 +135,10 @@ def _passage_json(p: ResolvedPassage) -> dict[str, Any]:
     }
 
 
+MAX_WEB_SEARCHES = 8
+MIN_WEB_SOURCES = 4
+
+
 class ToolExecutor:
     def __init__(
         self,
@@ -144,6 +149,12 @@ class ToolExecutor:
         web: WebSearch | None,
     ) -> None:
         self._passages, self._search, self._repo, self._memory, self._web = passages, search, repo, memory, web
+        self.start_turn()
+
+    def start_turn(self) -> None:
+        """Cada resposta tem sua própria cota de pesquisas na web."""
+        self._web_searches = 0
+        self._web_sources: set[str] = set()
 
     async def run(self, name: str, args: dict[str, Any]) -> ToolOutcome:
         handler = getattr(self, f"_t_{name}", None)
@@ -250,11 +261,21 @@ class ToolExecutor:
 
     async def _t_pesquisar_web_serper(self, a: dict[str, Any]) -> tuple[str, str | None]:
         assert self._web is not None
+        if self._web_searches >= MAX_WEB_SEARCHES:
+            return (
+                f"limite de {MAX_WEB_SEARCHES} pesquisas nesta resposta atingido: conclua com o que já reuniu, "
+                "com os versículos como base."
+            ), None
+        self._web_searches += 1
         results = await self._web.search(a["consulta"], 5)
+        self._web_sources |= {r.link for r in results if r.link}
         return _dump(
             {
                 "aviso": WEB_WARNING,
                 "resultados": [{"titulo": r.title, "link": r.link, "trecho": r.snippet} for r in results],
+                "fontes_reunidas": len(self._web_sources),
+                "fontes_minimas": MIN_WEB_SOURCES,
+                "pesquisas_restantes": MAX_WEB_SEARCHES - self._web_searches,
             }
         ), None
 

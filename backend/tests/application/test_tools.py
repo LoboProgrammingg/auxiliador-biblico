@@ -138,3 +138,44 @@ async def test_parallel_tool_calls_share_session_safely(executor: ToolExecutor) 
         executor.run("referencias_cruzadas", {"referencia": "Fp 2:3"}),
     )
     assert not any(o.is_error for o in outcomes), [o.content for o in outcomes if o.is_error]
+
+
+class NumberedWeb:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def search(self, query: str, num: int = 5) -> list[WebResult]:
+        self.calls += 1
+        return [WebResult(f"Fonte {self.calls}-{i}", f"https://ex{self.calls}.org/{i}", "trecho") for i in range(2)]
+
+
+def web_executor(bible_db: AsyncSession, web: NumberedWeb) -> ToolExecutor:
+    repo = SqlBibleRepository(bible_db)
+    passages = PassageService(repo)
+    return ToolExecutor(
+        passages=passages,
+        search=SearchService(repo, passages, FakeEmbedder(), NoRerank()),
+        repo=repo,
+        memory=MemoryService(SqlMemoryRepository(bible_db)),
+        web=web,
+    )
+
+
+async def test_web_search_reports_sources_gathered(bible_db: AsyncSession) -> None:
+    executor = web_executor(bible_db, NumberedWeb())
+    first = json.loads((await executor.run("pesquisar_web_serper", {"consulta": "a"})).content)
+    assert first["fontes_reunidas"] == 2 and first["fontes_minimas"] == 4 and first["pesquisas_restantes"] == 7
+    second = json.loads((await executor.run("pesquisar_web_serper", {"consulta": "b"})).content)
+    assert second["fontes_reunidas"] == 4 and second["pesquisas_restantes"] == 6
+
+
+async def test_web_search_is_capped_at_eight_per_answer(bible_db: AsyncSession) -> None:
+    web = NumberedWeb()
+    executor = web_executor(bible_db, web)
+    for _ in range(8):
+        await executor.run("pesquisar_web_serper", {"consulta": "x"})
+    ninth = await executor.run("pesquisar_web_serper", {"consulta": "x"})
+    assert web.calls == 8 and "limite de 8 pesquisas" in ninth.content
+    executor.start_turn()
+    again = json.loads((await executor.run("pesquisar_web_serper", {"consulta": "y"})).content)
+    assert web.calls == 9 and again["pesquisas_restantes"] == 7 and again["fontes_reunidas"] == 2

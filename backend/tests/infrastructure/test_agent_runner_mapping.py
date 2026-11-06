@@ -99,3 +99,18 @@ def test_system_prompt_points_to_the_skill_instead_of_carrying_it() -> None:
     assert "ilustracoes" in SYSTEM_PROMPT
     for marker in ("[[linha:", "[[mapa:", "[[quiasmo:", "[[rota:"):
         assert marker not in SYSTEM_PROMPT
+
+
+def test_runner_has_room_for_reading_and_eight_web_searches(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from app.application.chat.ports import AgentTools
+    from app.infrastructure.external.agent_sdk.runner import ClaudeAgentRunner
+
+    options = ClaudeAgentRunner("m", "medium", tmp_path, False)._options(None, AgentTools({}, ["WebSearch"], None))  # type: ignore[arg-type]
+    assert options.max_turns == 24
+
+
+def test_prompt_asks_for_interpretations_with_verses_first() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "no mínimo 4 fontes" in SYSTEM_PROMPT and "no máximo 8 pesquisas" in SYSTEM_PROMPT
+    assert "Fontes consultadas" in SYSTEM_PROMPT

@@ -293,3 +293,19 @@ async def test_wrong_fact_becomes_issue_with_correction(bible_db: AsyncSession) 
     ]
     stored = (await SqlConversationRepository(bible_db).messages(cid))[-1]
     assert any(s["type"] == "issue" and s.get("correction") for s in stored.segments)
+
+
+async def test_each_answer_gets_its_own_web_search_quota(bible_db: AsyncSession) -> None:
+    from tests.application.test_tools import NumberedWeb, web_executor
+
+    web = NumberedWeb()
+    executor = web_executor(bible_db, web)
+    script = [("tool", "pesquisar_web_serper", {"consulta": "q"})] * 8 + ["ok"]
+    repo = SqlBibleRepository(bible_db)
+    svc = ChatService(
+        SqlConversationRepository(bible_db), PassageService(repo), repo, executor, FakeAgentRunner(script), True
+    )
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "Interprete Fp 2")
+    await collect(svc, cid, "E o versículo 3?")
+    assert web.calls == 16

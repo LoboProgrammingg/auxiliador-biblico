@@ -187,6 +187,7 @@ class ChatService:
         await self._conversations.add_message(conversation_id, "user", text, None)
         await self._conversations.set_title_if_default(conversation_id, text)
         message_id = await self._conversations.start_assistant(conversation_id)
+        self._executor.start_turn()
         turn, pending = _Turn(), list[ChatEvent]()
         saved_at = time.monotonic()
         prompt = text
