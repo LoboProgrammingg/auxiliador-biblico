@@ -65,7 +65,7 @@ Nenhum texto bíblico fica neste repositório. Várias traduções têm direitos
 | **Voyage AI** | Embeddings e reranker (a Anthropic não tem modelo de embeddings e recomenda a Voyage) | [MongoDB Atlas](https://cloud.mongodb.com) → *AI Model APIs* → *Create model API key* | 200 milhões de tokens grátis por conta. A ingestão completa usa cerca de 10 milhões (estimativa pelo tamanho do texto). **Sem forma de pagamento cadastrada, o limite é de 3 requisições e 10 mil tokens por minuto**, e a ingestão levaria mais de um dia. Com cartão cadastrado na mesma organização, os tokens grátis continuam valendo e a ingestão leva menos de uma hora. |
 | **Claude (agente)** | As conversas | — | Veja abaixo. |
 | **Jev / TypeSafe** (opcional) | Triagem, conferência de interpretação e guarda teológica | [typesafe.ai](https://typesafe.ai) | US$ 0,042 por milhão de tokens de entrada; uma triagem tem cerca de 600 tokens. |
-| **Serper** (opcional) | Pesquisa web extra | [serper.dev](https://serper.dev) | Plano gratuito de teste. O agente já tem a busca web nativa do Claude Code. |
+| **Serper** (opcional) | Interpretações de estudiosos e contexto histórico: em estudos e pedidos de opinião, o agente reúne no mínimo 4 fontes, com até 8 pesquisas por resposta, e lista as fontes com link | [serper.dev](https://serper.dev) | Plano gratuito de teste; cada estudo pode usar até 8 pesquisas. Sem a chave, o agente usa a busca web nativa do Claude Code. |
 
 ### Autenticação do agente
 

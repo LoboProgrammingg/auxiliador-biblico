@@ -69,7 +69,7 @@ class ClaudeAgentRunner:
             disallowed_tools=BLOCKED_BUILTINS,
             permission_mode="dontAsk",
             include_partial_messages=True,
-            max_turns=12,
+            max_turns=24,
             resume=session_id,
         )
 
