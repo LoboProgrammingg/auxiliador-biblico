@@ -6,6 +6,10 @@ _OPINION = re.compile(
     r"\b(?:na sua (?:opiniao|visao)|(?:qual|e) (?:e )?(?:a )?sua (?:opiniao|visao|interpretacao|leitura)"
     r"|o que (?:voce|vc|tu) (?:acha|pensa|entende)|(?:voce|vc) acredita)\b"
 )
+_BRIEF = re.compile(
+    r"\bbrevemente\b|(?<!\bem )\bbreve\b|\bresum\w*|\bsucint\w*|\bem poucas palavras\b"
+    r"|\b(?:bem|mais|seja|resposta|texto) curt[oa]\b|\bcurtinh[oa]\b|\bdireto ao ponto\b"
+)
 _WHOLE_CHAPTER = re.compile(r"\bcapitulo\s+\d{1,3}\b|\b[a-z]{2,}\s+\d{1,3}\b(?!\s*[:.,]\s*\d)")
 
 
@@ -19,9 +23,14 @@ def asks_opinion(text: str) -> bool:
     return _OPINION.search(_normalize(text)) is not None
 
 
+def wants_brief(text: str) -> bool:
+    """A pessoa pediu resposta curta (breve, brevemente, resumo, em poucas palavras…); em breve não conta."""
+    return _BRIEF.search(_normalize(text)) is not None
+
+
 def effort_for(text: str, study_effort: str | None) -> str | None:
-    """Estudo de capítulo inteiro e pedido de opinião recebem o esforço maior; o resto usa o padrão (None)."""
-    if study_effort is None:
+    """Estudo de capítulo inteiro e pedido de opinião ganham o esforço maior; resposta breve e o resto, o padrão."""
+    if study_effort is None or wants_brief(text):
         return None
     normalized = _normalize(text)
     if asks_opinion(text) or (_STUDY_VERB.search(normalized) and _WHOLE_CHAPTER.search(normalized)):

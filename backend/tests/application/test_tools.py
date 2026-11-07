@@ -114,6 +114,21 @@ async def test_original_e_lexico_includes_gloss(executor: ToolExecutor, bible_db
     assert word["strong"] == "G3309" and word["lema"] == "μεριμνάω" and word["definicao"] == "x y"
 
 
+async def test_original_e_lexico_keeps_definitions_short(executor: ToolExecutor, bible_db: AsyncSession) -> None:
+    await bible_db.execute(
+        text(
+            "INSERT INTO original_words (book_id, chapter, verse, position, surface, transliteration, gloss_en, "
+            "strong, morphology, language) VALUES (50, 2, 3, 1, 'μεριμνᾶτε', 'merimnate', 'be anxious', 'G3309', "
+            "'V-PAM-2P', 'grc')"
+        )
+    )
+    await bible_db.execute(
+        text("INSERT INTO lexicon VALUES ('G3309', 'μεριμνάω', 'merimnaō', 'to worry', :d)"), {"d": "a" * 500}
+    )
+    data = json.loads((await executor.run("original_e_lexico", {"referencia": "Fp 2:3"})).content)
+    assert len(data["palavras"][0]["definicao"]) == 160
+
+
 async def test_web_search_includes_warning(executor: ToolExecutor) -> None:
     out = await executor.run("pesquisar_web_serper", {"consulta": "Filipos"})
     assert "nunca como texto bíblico" in out.content and "https://exemplo.org/filipos" in out.content

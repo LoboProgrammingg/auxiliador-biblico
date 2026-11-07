@@ -40,3 +40,7 @@ class ConversationRepository(ABC):
 
     @abstractmethod
     async def mark_interrupted(self) -> int: ...
+
+    @abstractmethod
+    async def token_usage_totals(self) -> tuple[int, int]:
+        """Quantas respostas têm uso de tokens registrado e a soma do total delas."""

@@ -12,7 +12,7 @@ from claude_agent_sdk import (
     StreamEvent,
 )
 
-from app.application.chat.ports import AgentDone, AgentEvent, AgentText, AgentTools, AgentToolStart
+from app.application.chat.ports import AgentDone, AgentEvent, AgentText, AgentTools, AgentToolStart, TokenUsage
 from app.application.chat.prompts import SYSTEM_PROMPT
 
 logger = logging.getLogger(__name__)
@@ -34,6 +34,17 @@ def _error_code(message: ResultMessage) -> str:
     return "agente_erro"
 
 
+_INPUT_KEYS = ("input_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+
+
+def _token_usage(usage: dict[str, Any] | None) -> TokenUsage | None:
+    if not usage:
+        return None
+    output = int(usage.get("output_tokens") or 0)
+    total = sum(int(usage.get(key) or 0) for key in _INPUT_KEYS) + output
+    return TokenUsage(total=total, output=output, cached=int(usage.get("cache_read_input_tokens") or 0))
+
+
 def map_message(message: Any) -> list[AgentEvent]:
     if isinstance(message, StreamEvent):
         event = message.event
@@ -44,7 +55,8 @@ def map_message(message: Any) -> list[AgentEvent]:
             return [AgentToolStart(block.get("name", ""))]
         return []
     if isinstance(message, ResultMessage):
-        return [AgentDone(message.session_id, message.is_error, _error_code(message) if message.is_error else None)]
+        error = _error_code(message) if message.is_error else None
+        return [AgentDone(message.session_id, message.is_error, error, _token_usage(message.usage))]
     return []
 
 
@@ -52,10 +64,12 @@ class ClaudeAgentRunner:
     def __init__(self, model: str, effort: str, workdir: Path, permitir_api_paga: bool) -> None:
         self._model, self._effort, self._workdir, self._permitir = model, effort, workdir, permitir_api_paga
 
-    def _options(self, session_id: str | None, tools: AgentTools, effort: str | None = None) -> ClaudeAgentOptions:
+    def _options(
+        self, session_id: str | None, tools: AgentTools, effort: str | None = None, model: str | None = None
+    ) -> ClaudeAgentOptions:
         self._workdir.mkdir(parents=True, exist_ok=True)
         return ClaudeAgentOptions(
-            model=self._model,
+            model=model or self._model,
             effort=effort or self._effort,  # type: ignore[arg-type]
             system_prompt=SYSTEM_PROMPT,
             setting_sources=[],
@@ -74,13 +88,18 @@ class ClaudeAgentRunner:
         )
 
     async def run(
-        self, prompt: str, session_id: str | None, tools: AgentTools, effort: str | None = None
+        self,
+        prompt: str,
+        session_id: str | None,
+        tools: AgentTools,
+        effort: str | None = None,
+        model: str | None = None,
     ) -> AsyncIterator[AgentEvent]:
         if paid_key_blocked(self._permitir):
             yield AgentDone(session_id or "", True, "chave_paga_detectada")
             return
         try:
-            async with ClaudeSDKClient(options=self._options(session_id, tools, effort)) as client:
+            async with ClaudeSDKClient(options=self._options(session_id, tools, effort, model)) as client:
                 await client.query(prompt)
                 async for message in client.receive_response():
                     for event in map_message(message):

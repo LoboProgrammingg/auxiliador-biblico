@@ -2,7 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { toBlocks } from "@/lib/segments";
+import { formatTokens, toBlocks } from "@/lib/segments";
 import { useChat, type UiMessage } from "@/stores/chat";
 import type { IssueKind, Segment } from "@/types/api";
 import { ChiasmCard } from "./ChiasmCard";
@@ -121,6 +121,7 @@ export function MessageView({ message }: { message: UiMessage }) {
   const memories = message.segments.filter((s): s is Extract<Segment, { type: "memory" }> => s.type === "memory");
   const study = message.segments.some((s) => s.type === "timeline");
   const errors = message.segments.filter((s): s is Extract<Segment, { type: "error" }> => s.type === "error");
+  const usage = message.segments.find((s): s is Extract<Segment, { type: "usage" }> => s.type === "usage");
   return (
     <article className={study ? "resposta estudo" : "resposta"}>
       {crisis && <CrisisCard numero={crisis.numero} url={crisis.url} />}
@@ -138,6 +139,13 @@ export function MessageView({ message }: { message: UiMessage }) {
       )}
       {message.error && <p className="mt-3 text-sm font-bold text-vinho">{message.error}</p>}
       <Issues segments={message.segments} />
+      {usage && (
+        <p className="mt-3 text-xs text-tinta-suave">
+          {formatTokens(usage.total)} tokens nesta resposta ({formatTokens(usage.cached)} do cache,{" "}
+          {formatTokens(usage.output)} escritos) · média de{" "}
+          {formatTokens(usage.average)} por pergunta ({usage.questions} {usage.questions === 1 ? "pergunta" : "perguntas"})
+        </p>
+      )}
     </article>
   );
 }

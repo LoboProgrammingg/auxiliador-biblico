@@ -7,9 +7,9 @@ from dataclasses import replace
 from typing import Any
 
 from app.application.bible.passages import PassageService
-from app.application.chat.effort import asks_opinion, effort_for
+from app.application.chat.effort import asks_opinion, effort_for, wants_brief
 from app.application.chat.events import ChatEvent, error_event, passage_payload
-from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentTools, AgentToolStart
+from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentTools, AgentToolStart, TokenUsage
 from app.application.chat.tools import STATUS, ToolExecutor, ToolOutcome, allowed_tool_names, build_mcp_server
 from app.application.judgments.crisis import detect_crisis
 from app.application.judgments.service import CRISIS_THRESHOLD, JudgmentService, sentence_after, triage_block
@@ -38,6 +38,9 @@ CVV = {"numero": "188", "url": "https://cvv.org.br"}
 CHECKPOINT_SECONDS = 3.0
 OPINION_BLOCK = (
     "[Pedido de opinião: a pessoa quer a SUA opinião e a SUA interpretação; siga a seção Quando pedirem sua opinião.]"
+)
+BRIEF_BLOCK = (
+    "[Pedido de resposta breve: siga a seção Quando pedirem resposta breve; só o essencial, sem pesquisa na web.]"
 )
 DEFAULT_TIMEOUT_S = 300.0
 NATIVE_STATUS = {"WebSearch": "Pesquisando na web…"}
@@ -149,6 +152,26 @@ class ChatService:
             items.append({"kind": "interpretacao_contradiz", "excerpt": issue.claim, "marker": issue.marker})
         return items
 
+    async def _usage(self, usage: TokenUsage) -> dict[str, int]:
+        """Tokens desta resposta e a média por pergunta, contando com ela."""
+        count, total = await self._conversations.token_usage_totals()
+        questions = count + 1
+        average = round((total + usage.total) / questions)
+        return {
+            "total": usage.total,
+            "output": usage.output,
+            "cached": usage.cached,
+            "average": average,
+            "questions": questions,
+        }
+
+    async def _memory_block(self) -> str:
+        """A memória vai no prompt da primeira mensagem para o agente não gastar uma rodada só para listá-la."""
+        listed = await self._executor.run("memoria_listar", {})
+        if listed.is_error or listed.content == "[]":
+            return "[Memória da pessoa: nada guardado ainda]"
+        return f"[Memória da pessoa (já carregada; não chame memoria_listar): {listed.content}]"
+
     def _tools(self, pending: list[ChatEvent]) -> AgentTools:
         async def on_outcome(outcome: ToolOutcome) -> None:
             if outcome.saved_memory:
@@ -162,7 +185,15 @@ class ChatService:
         server = build_mcp_server(self._executor, on_outcome, self._web_serper)
         return AgentTools(server, allowed_tool_names(self._web_serper), invoke)
 
-    async def send(self, conversation_id: uuid.UUID, user_text: str) -> AsyncIterator[ChatEvent]:
+    async def send(
+        self,
+        conversation_id: uuid.UUID,
+        user_text: str,
+        model: str | None = None,
+        effort: str | None = None,
+        brief: bool = False,
+    ) -> AsyncIterator[ChatEvent]:
+        """model e effort escolhidos na tela vencem o padrão; brief liga a resposta curta sem precisar escrever."""
         text = user_text.strip()
         if not text or len(user_text) > MAX_TEXT:
             yield error_event("texto_invalido")
@@ -173,13 +204,15 @@ class ChatService:
             return
         try:
             async with lock:
-                async for event in self._send_locked(conversation_id, text):
+                async for event in self._send_locked(conversation_id, text, model, effort, brief):
                     yield event
         finally:
             if not lock.locked():
                 _LOCKS.pop(conversation_id, None)
 
-    async def _send_locked(self, conversation_id: uuid.UUID, text: str) -> AsyncIterator[ChatEvent]:
+    async def _send_locked(
+        self, conversation_id: uuid.UUID, text: str, model: str | None, effort: str | None, brief: bool
+    ) -> AsyncIterator[ChatEvent]:
         conversation = await self._conversations.get(conversation_id)
         if conversation is None:
             yield error_event("conversa_inexistente")
@@ -201,13 +234,17 @@ class ChatService:
             prompt = f"{text}\n\n{triage_block(replace(triage, crisis=1.0) if at_risk else triage)}"
         elif at_risk:
             prompt = f"{text}\n\n[Triagem automática: risco_à_vida=alto]"
+        if conversation.agent_session_id is None:
+            prompt = f"{prompt}\n\n{await self._memory_block()}"
         if asks_opinion(text):
             prompt = f"{prompt}\n\n{OPINION_BLOCK}"
+        if brief or wants_brief(text):
+            prompt = f"{prompt}\n\n{BRIEF_BLOCK}"
         processor = MarkerStreamProcessor(self._passages)
         done: AgentDone | None = None
         deadline = time.monotonic() + self._timeout_s
-        effort = effort_for(text, self._study_effort)
-        agent = aiter(self._runner.run(prompt, conversation.agent_session_id, self._tools(pending), effort))
+        effort = effort or effort_for(text, self._study_effort)
+        agent = aiter(self._runner.run(prompt, conversation.agent_session_id, self._tools(pending), effort, model))
         try:
             while True:
                 try:
@@ -244,6 +281,10 @@ class ChatService:
         items = await self._review(turn, text)
         turn.segments.extend({"type": "issue", **item} for item in items)
         yield ChatEvent("issues", {"items": items})
+        if done is not None and done.usage is not None:
+            usage = await self._usage(done.usage)
+            turn.segments.append({"type": "usage", **usage})
+            yield ChatEvent("usage", usage)
         if done is not None and done.session_id and done.session_id != conversation.agent_session_id:
             await self._conversations.set_session(conversation_id, done.session_id)
         status = "erro" if any(seg["type"] == "error" for seg in turn.segments) else "ok"

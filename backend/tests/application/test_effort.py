@@ -69,3 +69,43 @@ def test_other_texts_are_not_opinion_requests(text: str) -> None:
     from app.application.chat.effort import asks_opinion
 
     assert not asks_opinion(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Me envie um breve resumo de Romanos 8",
+        "Explique brevemente o que é graça",
+        "Resuma o livro de Rute",
+        "Qual o resumo de Gênesis 1?",
+        "Responda de forma sucinta: o que é fé?",
+        "Em poucas palavras, quem foi Davi?",
+        "Seja breve: o que é justificação?",
+        "me dá uma resposta curta sobre o batismo",
+        "resumidamente, o que acontece em Atos 2?",
+    ],
+)
+def test_detects_brief_requests(text: str) -> None:
+    from app.application.chat.effort import wants_brief
+
+    assert wants_brief(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Jesus volta em breve?",
+        "Interprete João 1",
+        "Estou com medo de não conseguir pagar as contas",
+        "A vida é curta, o que a Bíblia diz?",
+    ],
+)
+def test_other_texts_are_not_brief_requests(text: str) -> None:
+    from app.application.chat.effort import wants_brief
+
+    assert not wants_brief(text)
+
+
+def test_brief_request_keeps_default_effort() -> None:
+    assert effort_for("Resuma João 1 brevemente", "high") is None
+    assert effort_for("Na sua opinião, em poucas palavras, o que é fé?", "high") is None

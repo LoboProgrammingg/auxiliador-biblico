@@ -116,3 +116,15 @@ class SqlConversationRepository(ConversationRepository):
         count = len(result.all())
         await self._session.commit()
         return count
+
+    async def token_usage_totals(self) -> tuple[int, int]:
+        result = await self._session.execute(
+            text(
+                "SELECT count(*), COALESCE(sum((s->>'total')::bigint), 0) FROM messages m, "
+                "jsonb_array_elements(CASE WHEN jsonb_typeof(m.display_segments) = 'array' "
+                "THEN m.display_segments ELSE '[]'::jsonb END) s "
+                "WHERE m.role = 'assistant' AND s->>'type' = 'usage'"
+            )
+        )
+        count, total = result.one()
+        return int(count), int(total)

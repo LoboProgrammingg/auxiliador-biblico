@@ -57,7 +57,16 @@ export type Segment =
   | { type: "issue"; kind: IssueKind; excerpt: string; marker?: string; correction?: string }
   | { type: "crisis"; numero: string; url: string }
   | { type: "memory"; topic: string }
-  | { type: "error"; code: string; message: string };
+  | { type: "error"; code: string; message: string }
+  | ({ type: "usage" } & TokenUsage);
+
+export interface TokenUsage {
+  total: number;
+  output: number;
+  cached: number;
+  average: number;
+  questions: number;
+}
 
 export type ChatEvent =
   | { event: "text"; data: { text: string } }
@@ -71,6 +80,7 @@ export type ChatEvent =
   | { event: "crisis"; data: { numero: string; url: string } }
   | { event: "triage"; data: { moment: string; distress: number } }
   | { event: "issues"; data: { items: { kind: IssueKind; excerpt: string; marker?: string; correction?: string }[] } }
+  | { event: "usage"; data: TokenUsage }
   | { event: "done"; data: { message_id: number } }
   | { event: "error"; data: { code: string; message: string } };
 

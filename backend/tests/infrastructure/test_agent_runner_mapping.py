@@ -25,6 +25,21 @@ def test_runner_maps_result() -> None:
     assert map_message(result) == [AgentDone("sess", False, None)]
 
 
+def test_runner_maps_token_usage() -> None:
+    from app.application.chat.ports import TokenUsage
+
+    usage = {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 200,
+        "cache_read_input_tokens": 3000,
+        "output_tokens": 45,
+    }
+    result = ResultMessage(
+        subtype="success", duration_ms=1, duration_api_ms=1, is_error=False, num_turns=3, session_id="s", usage=usage
+    )
+    assert map_message(result) == [AgentDone("s", False, None, TokenUsage(total=3255, output=45, cached=3000))]
+
+
 def test_paid_key_blocked(monkeypatch) -> None:  # type: ignore[no-untyped-def]
     monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-x")
     assert paid_key_blocked(permitir=False) is True
@@ -76,6 +91,16 @@ def test_runner_effort_override(tmp_path) -> None:  # type: ignore[no-untyped-de
     assert runner._options(None, tools, "high").effort == "high"
 
 
+def test_runner_model_override(tmp_path) -> None:  # type: ignore[no-untyped-def]
+    from app.application.chat.ports import AgentTools
+    from app.infrastructure.external.agent_sdk.runner import ClaudeAgentRunner
+
+    runner = ClaudeAgentRunner("m", "medium", tmp_path, False)
+    tools = AgentTools({}, ["WebSearch"], None)  # type: ignore[arg-type]
+    assert runner._options(None, tools).model == "m"
+    assert runner._options(None, tools, None, "claude-opus-5-5").model == "claude-opus-5-5"
+
+
 def test_runner_loads_only_the_bundled_illustration_skill(tmp_path) -> None:  # type: ignore[no-untyped-def]
     from pathlib import Path
 
@@ -114,3 +139,20 @@ def test_prompt_asks_for_interpretations_with_verses_first() -> None:
 
     assert "no mínimo 4 fontes" in SYSTEM_PROMPT and "no máximo 8 pesquisas" in SYSTEM_PROMPT
     assert "Fontes consultadas" in SYSTEM_PROMPT
+
+
+def test_system_prompt_speaks_with_its_own_voice() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "## Sua voz" in SYSTEM_PROMPT and "conclusões próprias" in SYSTEM_PROMPT
+    assert "## Quando pedirem resposta breve" in SYSTEM_PROMPT
+    assert "sem tomar partido" not in SYSTEM_PROMPT
+    assert "pensamento crítico" in SYSTEM_PROMPT
+
+
+def test_system_prompt_batches_tools_and_reads_memory_from_the_prompt() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "## Como usar as ferramentas" in SYSTEM_PROMPT and "no máximo 2 rodadas" in SYSTEM_PROMPT
+    assert "[Memória da pessoa]" in SYSTEM_PROMPT
+    assert "No começo de cada conversa, chame memoria_listar" not in SYSTEM_PROMPT

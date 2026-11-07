@@ -45,10 +45,18 @@ class AgentToolStart:
 
 
 @dataclass(frozen=True)
+class TokenUsage:
+    total: int
+    output: int
+    cached: int = 0
+
+
+@dataclass(frozen=True)
 class AgentDone:
     session_id: str
     is_error: bool
     error: str | None
+    usage: TokenUsage | None = None
 
 
 @dataclass(frozen=True)
@@ -63,5 +71,10 @@ AgentEvent = AgentText | AgentToolStart | AgentDone
 
 class AgentRunner(Protocol):
     def run(
-        self, prompt: str, session_id: str | None, tools: AgentTools, effort: str | None = None
+        self,
+        prompt: str,
+        session_id: str | None,
+        tools: AgentTools,
+        effort: str | None = None,
+        model: str | None = None,
     ) -> AsyncIterator[AgentEvent]: ...

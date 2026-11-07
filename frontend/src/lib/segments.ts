@@ -26,6 +26,8 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
       return [...segments, ...ev.data.items.map((i) => ({ type: "issue" as const, ...i }))];
     case "crisis":
       return [{ type: "crisis", numero: ev.data.numero, url: ev.data.url }, ...segments];
+    case "usage":
+      return [...segments, { type: "usage", ...ev.data }];
     case "memory_saved":
       return [...segments, { type: "memory", topic: ev.data.topic }];
     case "error":
@@ -33,6 +35,14 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
     default:
       return segments;
   }
+}
+
+const NUMBER = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+
+export function formatTokens(n: number): string {
+  if (n >= 1_000_000) return `${NUMBER.format(n / 1_000_000)} mi`;
+  if (n >= 1_000) return `${NUMBER.format(n / 1_000)} mil`;
+  return NUMBER.format(n);
 }
 
 export type Block =
