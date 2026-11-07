@@ -17,7 +17,7 @@ import { VERSE_SEARCH_ID } from "./VerseSearch";
 
 function Welcome() {
   return (
-    <div className="mx-auto mt-[12vh] max-w-xl">
+    <div className="mt-[10vh] max-w-xl">
       <h1 className="font-escritura text-[2.1rem] leading-tight font-bold text-couro">Sobre o que você quer conversar hoje?</h1>
       <Divider className="mt-3" />
       <p className="mt-2 text-tinta-suave">
@@ -63,8 +63,10 @@ export function ChatApp() {
   }, [select, toggleFocus, focus]);
 
   return (
-    <div className={`grid h-dvh ${focus ? "foco" : "md:grid-cols-[17rem_1fr]"}`}>
-      <div className={`${menuOpen ? "fixed inset-y-0 left-0 z-30 w-72" : "hidden"} ${focus ? "" : "md:static md:block"}`}>
+    <div className={`grid h-dvh grid-rows-[minmax(0,1fr)] overflow-hidden ${focus ? "foco" : "md:grid-cols-[17rem_1fr]"}`}>
+      <div
+        className={`${menuOpen ? "fixed inset-y-0 left-0 z-30 w-72" : "hidden"} ${focus ? "" : "md:static md:block md:min-h-0"}`}
+      >
         <Sidebar onNavigate={() => setMenuOpen(false)} />
       </div>
       <main className="flex min-h-0 flex-col">
@@ -74,7 +76,7 @@ export function ChatApp() {
           </button>
           <p className="font-escritura font-bold text-couro">Auxiliador Bíblico</p>
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-color:rgba(160,128,47,0.4)_transparent] [scrollbar-gutter:stable_both-edges] [scrollbar-width:thin]">
           <div className="mx-auto max-w-3xl space-y-7 px-5 py-8">
             <div className="flex justify-end gap-2">
               <button
