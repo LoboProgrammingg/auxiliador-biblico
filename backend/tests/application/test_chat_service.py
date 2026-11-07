@@ -375,3 +375,21 @@ async def test_token_usage_is_reported_with_running_average(bible_db: AsyncSessi
 async def test_no_usage_event_without_usage(bible_db: AsyncSession) -> None:
     events = await collect(make_service(bible_db, FakeAgentRunner(["Oi"])), await new_conversation(bible_db), "x")
     assert "usage" not in [e.name for e in events]
+
+
+async def test_study_plan_button_adds_plan_block_and_wins_over_brief(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Plano."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "A aliança com Abraão", brief=True, plan=True)]
+    prompt = runner.calls[0]["prompt"]
+    assert "[Pedido de plano de estudo" in prompt and "[Pedido de resposta breve" not in prompt
+
+
+async def test_study_plan_by_text_and_topic_follow_up_without_block(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Plano."])
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "Crie um plano de estudo sobre a graça")
+    await collect(svc, cid, "Fale sobre o tópico 1")
+    assert "[Pedido de plano de estudo" in runner.calls[0]["prompt"]
+    assert "[Pedido de plano de estudo" not in runner.calls[1]["prompt"]

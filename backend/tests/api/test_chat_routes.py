@@ -121,3 +121,11 @@ async def test_message_choice_is_passed_to_the_agent(bible_db: AsyncSession, api
     call = runner.calls[0]
     assert call["model"] == "claude-sonnet-5-5" and call["effort"] == "high"
     assert "[Pedido de resposta breve" in call["prompt"]
+
+
+async def test_study_plan_choice_is_passed_to_the_agent(bible_db: AsyncSession, api: httpx.AsyncClient) -> None:
+    runner = FakeAgentRunner(["Plano."])
+    api._transport.app.dependency_overrides[get_agent_runner] = lambda: runner  # type: ignore[attr-defined]
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    await api.post(f"/api/v1/conversations/{cid}/messages", json={"text": "A graça", "plan": True})
+    assert "[Pedido de plano de estudo" in runner.calls[0]["prompt"]

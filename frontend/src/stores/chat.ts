@@ -42,6 +42,8 @@ interface ChatState {
   options: ChatOptions;
   restoreOptions: () => void;
   setOptions: (patch: Partial<ChatOptions>) => void;
+  studyPlan: boolean;
+  setStudyPlan: (on: boolean) => void;
 }
 
 let counter = 0;
@@ -107,7 +109,8 @@ export const useChat = create<ChatState>((set, get) => ({
     }
     set((s) => ({ messages: [...s.messages, { key: key(), role: "user", text, segments: [] }] }));
     const target = id;
-    const options = get().options;
+    const options = { ...get().options, plan: get().studyPlan };
+    set({ studyPlan: false });
     await follow(target, (signal) => sendMessage(target, text, options, signal));
   },
 
@@ -121,6 +124,8 @@ export const useChat = create<ChatState>((set, get) => ({
     saveOptions(options);
     set({ options });
   },
+  studyPlan: false,
+  setStudyPlan: (on) => set({ studyPlan: on }),
 }));
 
 /** Acompanha uma resposta (nova ou retomada); se a tela trocar de conversa, só para de assistir. */

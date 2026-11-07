@@ -156,3 +156,11 @@ def test_system_prompt_batches_tools_and_reads_memory_from_the_prompt() -> None:
     assert "## Como usar as ferramentas" in SYSTEM_PROMPT and "no máximo 2 rodadas" in SYSTEM_PROMPT
     assert "[Memória da pessoa]" in SYSTEM_PROMPT
     assert "No começo de cada conversa, chame memoria_listar" not in SYSTEM_PROMPT
+
+
+def test_prompt_guides_study_plans_and_septuagint_lookups() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "## Plano de estudo" in SYSTEM_PROMPT and "ordem cronológica" in SYSTEM_PROMPT
+    assert "### Curiosidades" in SYSTEM_PROMPT and "fale sobre o tópico 1" in SYSTEM_PROMPT
+    assert "Septuaginta" in SYSTEM_PROMPT

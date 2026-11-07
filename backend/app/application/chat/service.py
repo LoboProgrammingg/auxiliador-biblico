@@ -7,7 +7,7 @@ from dataclasses import replace
 from typing import Any
 
 from app.application.bible.passages import PassageService
-from app.application.chat.effort import asks_opinion, effort_for, wants_brief
+from app.application.chat.effort import asks_opinion, effort_for, wants_brief, wants_plan
 from app.application.chat.events import ChatEvent, error_event, passage_payload
 from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentTools, AgentToolStart, TokenUsage
 from app.application.chat.tools import STATUS, ToolExecutor, ToolOutcome, allowed_tool_names, build_mcp_server
@@ -41,6 +41,9 @@ OPINION_BLOCK = (
 )
 BRIEF_BLOCK = (
     "[Pedido de resposta breve: siga a seção Quando pedirem resposta breve; só o essencial, sem pesquisa na web.]"
+)
+PLAN_BLOCK = (
+    "[Pedido de plano de estudo: siga a seção Plano de estudo; monte o plano, não desenvolva os tópicos ainda.]"
 )
 DEFAULT_TIMEOUT_S = 300.0
 NATIVE_STATUS = {"WebSearch": "Pesquisando na web…"}
@@ -192,8 +195,9 @@ class ChatService:
         model: str | None = None,
         effort: str | None = None,
         brief: bool = False,
+        plan: bool = False,
     ) -> AsyncIterator[ChatEvent]:
-        """model e effort escolhidos na tela vencem o padrão; brief liga a resposta curta sem precisar escrever."""
+        """Escolhas da tela vencem o padrão; brief liga a resposta curta e plan, o plano de estudo."""
         text = user_text.strip()
         if not text or len(user_text) > MAX_TEXT:
             yield error_event("texto_invalido")
@@ -204,14 +208,20 @@ class ChatService:
             return
         try:
             async with lock:
-                async for event in self._send_locked(conversation_id, text, model, effort, brief):
+                async for event in self._send_locked(conversation_id, text, model, effort, brief, plan):
                     yield event
         finally:
             if not lock.locked():
                 _LOCKS.pop(conversation_id, None)
 
     async def _send_locked(
-        self, conversation_id: uuid.UUID, text: str, model: str | None, effort: str | None, brief: bool
+        self,
+        conversation_id: uuid.UUID,
+        text: str,
+        model: str | None,
+        effort: str | None,
+        brief: bool,
+        plan: bool,
     ) -> AsyncIterator[ChatEvent]:
         conversation = await self._conversations.get(conversation_id)
         if conversation is None:
@@ -238,7 +248,9 @@ class ChatService:
             prompt = f"{prompt}\n\n{await self._memory_block()}"
         if asks_opinion(text):
             prompt = f"{prompt}\n\n{OPINION_BLOCK}"
-        if brief or wants_brief(text):
+        if plan or wants_plan(text):
+            prompt = f"{prompt}\n\n{PLAN_BLOCK}"
+        elif brief or wants_brief(text):
             prompt = f"{prompt}\n\n{BRIEF_BLOCK}"
         processor = MarkerStreamProcessor(self._passages)
         done: AgentDone | None = None

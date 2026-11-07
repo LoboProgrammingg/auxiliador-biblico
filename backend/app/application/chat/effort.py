@@ -10,6 +10,7 @@ _BRIEF = re.compile(
     r"\bbrevemente\b|(?<!\bem )\bbreve\b|\bresum\w*|\bsucint\w*|\bem poucas palavras\b"
     r"|\b(?:bem|mais|seja|resposta|texto) curt[oa]\b|\bcurtinh[oa]\b|\bdireto ao ponto\b"
 )
+_PLAN = re.compile(r"\b(?:plano|roteiro) de estudos?\b")
 _WHOLE_CHAPTER = re.compile(r"\bcapitulo\s+\d{1,3}\b|\b[a-z]{2,}\s+\d{1,3}\b(?!\s*[:.,]\s*\d)")
 
 
@@ -26,6 +27,11 @@ def asks_opinion(text: str) -> bool:
 def wants_brief(text: str) -> bool:
     """A pessoa pediu resposta curta (breve, brevemente, resumo, em poucas palavras…); em breve não conta."""
     return _BRIEF.search(_normalize(text)) is not None
+
+
+def wants_plan(text: str) -> bool:
+    """A pessoa quer um plano de estudo sobre um tema (plano de leitura não conta)."""
+    return _PLAN.search(_normalize(text)) is not None
 
 
 def effort_for(text: str, study_effort: str | None) -> str | None:
