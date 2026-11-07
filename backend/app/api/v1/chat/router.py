@@ -70,6 +70,7 @@ class MessageIn(BaseModel):
     model: Literal["claude-sonnet-5-5", "claude-opus-5-5"] | None = None
     effort: Literal["medium", "high", "xhigh"] | None = None
     brief: bool = False
+    plan: bool = False
 
 
 class ConversationOut(BaseModel):
@@ -212,7 +213,7 @@ async def send_message(
     async def turn() -> AsyncIterator[ChatEvent]:
         async with factory() as session:
             service = _chat_service(session, runner, embedder, reranker, judgments)
-            async for event in service.send(conversation_id, body.text, body.model, body.effort, body.brief):
+            async for event in service.send(conversation_id, body.text, body.model, body.effort, body.brief, body.plan):
                 yield event
 
     job: ChatJob | None = jobs.start(conversation_id, turn)

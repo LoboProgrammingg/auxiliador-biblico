@@ -109,3 +109,26 @@ def test_other_texts_are_not_brief_requests(text: str) -> None:
 def test_brief_request_keeps_default_effort() -> None:
     assert effort_for("Resuma João 1 brevemente", "high") is None
     assert effort_for("Na sua opinião, em poucas palavras, o que é fé?", "high") is None
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Crie para mim um plano de estudo sobre a aliança com Abraão",
+        "Quero um plano de estudos sobre o Espírito Santo",
+        "monta um roteiro de estudo sobre Daniel",
+    ],
+)
+def test_detects_study_plan_requests(text: str) -> None:
+    from app.application.chat.effort import wants_plan
+
+    assert wants_plan(text)
+
+
+@pytest.mark.parametrize(
+    "text", ["Me dá um plano de leitura da Bíblia", "Como planejar meu devocional?", "Interprete João 1"]
+)
+def test_other_texts_are_not_study_plan_requests(text: str) -> None:
+    from app.application.chat.effort import wants_plan
+
+    assert not wants_plan(text)
