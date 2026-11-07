@@ -3,7 +3,7 @@ from collections.abc import AsyncIterator, Callable
 from contextlib import AbstractAsyncContextManager
 from datetime import datetime
 from functools import lru_cache
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from fastapi.responses import StreamingResponse
@@ -67,6 +67,9 @@ def get_judgments() -> JudgmentService:
 
 class MessageIn(BaseModel):
     text: str = Field(min_length=1, max_length=8000)
+    model: Literal["claude-sonnet-5-5", "claude-opus-5-5"] | None = None
+    effort: Literal["medium", "high", "xhigh"] | None = None
+    brief: bool = False
 
 
 class ConversationOut(BaseModel):
@@ -209,7 +212,7 @@ async def send_message(
     async def turn() -> AsyncIterator[ChatEvent]:
         async with factory() as session:
             service = _chat_service(session, runner, embedder, reranker, judgments)
-            async for event in service.send(conversation_id, body.text):
+            async for event in service.send(conversation_id, body.text, body.model, body.effort, body.brief):
                 yield event
 
     job: ChatJob | None = jobs.start(conversation_id, turn)

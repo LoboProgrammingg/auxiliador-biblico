@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import type { Passage, Segment } from "@/types/api";
-import { applyEvent, needsReattach, toBlocks } from "./segments";
+import { applyEvent, formatTokens, needsReattach, toBlocks } from "./segments";
 
 const passage: Passage = {
   reference: "Fp 4:6",
@@ -90,5 +90,18 @@ describe("robustness", () => {
     expect(needsReattach([{ ...base, role: "assistant", status: "ok" }])).toBe(false);
     expect(needsReattach([{ ...base, role: "assistant", status: "interrompida" }])).toBe(false);
     expect(needsReattach([])).toBe(false);
+  });
+});
+
+describe("token usage", () => {
+  test("usage event becomes a usage segment", () => {
+    const data = { total: 48200, output: 1200, cached: 40000, average: 41000, questions: 23 };
+    expect(applyEvent([], { event: "usage", data })).toEqual([{ type: "usage", ...data }]);
+  });
+
+  test("formats token counts in Portuguese", () => {
+    expect(formatTokens(850)).toBe("850");
+    expect(formatTokens(48230)).toBe("48,2 mil");
+    expect(formatTokens(1250000)).toBe("1,3 mi");
   });
 });

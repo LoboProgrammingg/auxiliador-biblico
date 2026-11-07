@@ -64,6 +64,24 @@ async def test_first_message_stores_session_and_next_resumes(bible_db: AsyncSess
     assert [c["session_id"] for c in runner.calls] == [None, "abc"]
 
 
+async def test_first_message_carries_memory_so_agent_skips_listing(bible_db: AsyncSession) -> None:
+    await MemoryService(SqlMemoryRepository(bible_db)).save("oracao", "pela mãe")
+    runner = FakeAgentRunner(["Oi"], session_id="abc")
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "primeira")
+    await collect(svc, cid, "segunda")
+    first, second = runner.calls[0]["prompt"], runner.calls[1]["prompt"]
+    assert first.startswith("primeira") and "[Memória da pessoa" in first and "pela mãe" in first
+    assert "[Memória da pessoa" not in second
+
+
+async def test_first_message_says_memory_is_empty(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Oi"])
+    await collect(make_service(bible_db, runner), await new_conversation(bible_db), "oi")
+    assert "[Memória da pessoa: nada guardado ainda]" in runner.calls[0]["prompt"]
+
+
 async def test_tool_start_becomes_status_and_memory_event(bible_db: AsyncSession) -> None:
     runner = FakeAgentRunner([("tool", "memoria_salvar", {"topico": "oracao", "conteudo": "pela mãe"}), "Anotei."])
     events = await collect(make_service(bible_db, runner), await new_conversation(bible_db), "ore pela minha mãe")
@@ -215,7 +233,7 @@ async def test_agent_error_is_persisted_in_segments(bible_db: AsyncSession) -> N
 
 async def test_runner_exception_is_recorded_not_left_generating(bible_db: AsyncSession) -> None:
     class Boom(FakeAgentRunner):
-        async def run(self, prompt, session_id, tools, effort=None):  # type: ignore[no-untyped-def,override]
+        async def run(self, prompt, session_id, tools, effort=None, model=None):  # type: ignore[no-untyped-def,override]
             yield AgentText("começo ")
             raise RuntimeError("falhou")
 
@@ -272,6 +290,25 @@ async def test_opinion_request_adds_opinion_block(bible_db: AsyncSession) -> Non
     assert "[Pedido de opinião" not in runner.calls[1]["prompt"]
 
 
+async def test_chosen_model_effort_and_brief_reach_the_agent(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Curto."])
+    svc = make_service(bible_db, runner, study_effort="high")
+    cid = await new_conversation(bible_db)
+    [e async for e in svc.send(cid, "Interprete João 1", model="claude-opus-5-5", effort="xhigh", brief=True)]
+    call = runner.calls[0]
+    assert call["model"] == "claude-opus-5-5" and call["effort"] == "xhigh"
+    assert "[Pedido de resposta breve" in call["prompt"]
+
+
+async def test_without_choice_keeps_default_model_and_automatic_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estudo."])
+    await collect(
+        make_service(bible_db, runner, study_effort="high"), await new_conversation(bible_db), "Interprete João 1"
+    )
+    call = runner.calls[0]
+    assert call["model"] is None and call["effort"] == "high" and "[Pedido de resposta breve" not in call["prompt"]
+
+
 async def test_wrong_fact_becomes_issue_with_correction(bible_db: AsyncSession) -> None:
     from sqlalchemy import text as sql
 
@@ -309,3 +346,32 @@ async def test_each_answer_gets_its_own_web_search_quota(bible_db: AsyncSession)
     await collect(svc, cid, "Interprete Fp 2")
     await collect(svc, cid, "E o versículo 3?")
     assert web.calls == 16
+
+
+async def test_brief_request_adds_brief_block(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Curto."])
+    svc = make_service(bible_db, runner, study_effort="high")
+    await collect(svc, await new_conversation(bible_db), "Me envie um breve resumo de João 1")
+    await collect(svc, await new_conversation(bible_db), "Jesus volta em breve?")
+    assert "[Pedido de resposta breve" in runner.calls[0]["prompt"] and runner.calls[0]["effort"] is None
+    assert "[Pedido de resposta breve" not in runner.calls[1]["prompt"]
+
+
+async def test_token_usage_is_reported_with_running_average(bible_db: AsyncSession) -> None:
+    from app.application.chat.ports import TokenUsage
+
+    cid = await new_conversation(bible_db)
+    first = FakeAgentRunner(["Um."] + [("done", False, None, TokenUsage(total=1000, output=100))])
+    await collect(make_service(bible_db, first), cid, "primeira")
+    second = FakeAgentRunner(["Dois."] + [("done", False, None, TokenUsage(total=3000, output=300, cached=2500))])
+    events = await collect(make_service(bible_db, second), cid, "segunda")
+    usage = next(e for e in events if e.name == "usage").data
+    assert usage == {"total": 3000, "output": 300, "cached": 2500, "average": 2000, "questions": 2}
+    assert [e.name for e in events][-2:] == ["usage", "done"]
+    stored = (await SqlConversationRepository(bible_db).messages(cid))[-1].segments
+    assert stored[-1] == {"type": "usage", **usage}
+
+
+async def test_no_usage_event_without_usage(bible_db: AsyncSession) -> None:
+    events = await collect(make_service(bible_db, FakeAgentRunner(["Oi"])), await new_conversation(bible_db), "x")
+    assert "usage" not in [e.name for e in events]

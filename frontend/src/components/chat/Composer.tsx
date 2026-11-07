@@ -1,9 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { EFFORTS, type EffortId, MODELS, type ModelId } from "@/lib/chatOptions";
 import { useChat } from "@/stores/chat";
 
 export const WORD_FOR_ME = "✨ Uma palavra pra mim";
+const SELECT =
+  "rounded-full border border-borda bg-pergaminho-claro px-2.5 py-1 text-sm text-couro hover:border-ouro focus:border-ouro focus:outline-none";
 
 export function Composer({ onSent }: { onSent?: () => void }) {
   const [text, setText] = useState("");
@@ -11,6 +14,11 @@ export function Composer({ onSent }: { onSent?: () => void }) {
   const send = useChat((s) => s.send);
   const loadDailyWord = useChat((s) => s.loadDailyWord);
   const dailyLoading = useChat((s) => s.daily.status === "loading");
+  const options = useChat((s) => s.options);
+  const setOptions = useChat((s) => s.setOptions);
+  const restoreOptions = useChat((s) => s.restoreOptions);
+
+  useEffect(restoreOptions, [restoreOptions]);
 
   const submit = async (value: string) => {
     if (!value.trim() || streaming) return;
@@ -44,7 +52,7 @@ export function Composer({ onSent }: { onSent?: () => void }) {
           placeholder="Escreva o que está no seu coração..."
           className="block w-full resize-none bg-transparent px-4 pt-3 text-[1.0625rem] leading-relaxed placeholder:text-tinta-suave/70 focus:outline-none focus-visible:outline-none"
         />
-        <div className="flex items-center justify-between gap-2 px-3 pb-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 px-3 pb-2.5">
           <button
             type="button"
             disabled={dailyLoading}
@@ -56,13 +64,51 @@ export function Composer({ onSent }: { onSent?: () => void }) {
           >
             {WORD_FOR_ME}
           </button>
-          <button
-            type="submit"
-            disabled={streaming || !text.trim()}
-            className="rounded-full bg-couro px-5 py-1.5 text-sm font-bold text-pergaminho-claro hover:bg-couro-claro disabled:opacity-40"
-          >
-            Enviar
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              aria-pressed={options.brief}
+              onClick={() => setOptions({ brief: !options.brief })}
+              title="Respostas curtas, só o essencial"
+              className={`rounded-full border px-3 py-1 text-sm font-bold transition-colors ${
+                options.brief
+                  ? "border-couro bg-couro text-pergaminho-claro"
+                  : "border-borda text-couro hover:border-ouro"
+              }`}
+            >
+              Resposta curta
+            </button>
+            <label className="sr-only" htmlFor="modelo">Modelo</label>
+            <select
+              id="modelo"
+              value={options.model}
+              onChange={(e) => setOptions({ model: e.target.value as ModelId })}
+              className={SELECT}
+            >
+              {MODELS.map((m) => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+            <label className="sr-only" htmlFor="esforco">Esforço</label>
+            <select
+              id="esforco"
+              value={options.effort}
+              onChange={(e) => setOptions({ effort: e.target.value as EffortId })}
+              className={SELECT}
+              title="Esforço de raciocínio"
+            >
+              {EFFORTS.map((ef) => (
+                <option key={ef.id} value={ef.id}>{ef.label}</option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={streaming || !text.trim()}
+              className="rounded-full bg-couro px-5 py-1.5 text-sm font-bold text-pergaminho-claro hover:bg-couro-claro disabled:opacity-40"
+            >
+              Enviar
+            </button>
+          </div>
         </div>
       </div>
       <p className="mt-1.5 text-center text-xs text-tinta-suave">

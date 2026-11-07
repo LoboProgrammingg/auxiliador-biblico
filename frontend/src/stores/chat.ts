@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { type ChatOptions, DEFAULT_OPTIONS, loadOptions, saveOptions } from "@/lib/chatOptions";
 import { applyEvent, needsReattach } from "@/lib/segments";
 import { api, attachStream, sendMessage } from "@/services/api";
 import type { ChatEvent, DailyWord, MessageStatus, Segment, StoredMessage } from "@/types/api";
@@ -38,6 +39,9 @@ interface ChatState {
   openPopup: (target: PopupTarget | null) => void;
   focus: boolean;
   toggleFocus: () => void;
+  options: ChatOptions;
+  restoreOptions: () => void;
+  setOptions: (patch: Partial<ChatOptions>) => void;
 }
 
 let counter = 0;
@@ -103,12 +107,20 @@ export const useChat = create<ChatState>((set, get) => ({
     }
     set((s) => ({ messages: [...s.messages, { key: key(), role: "user", text, segments: [] }] }));
     const target = id;
-    await follow(target, (signal) => sendMessage(target, text, signal));
+    const options = get().options;
+    await follow(target, (signal) => sendMessage(target, text, options, signal));
   },
 
   openPopup: (target) => set({ popup: target }),
   focus: false,
   toggleFocus: () => set((s) => ({ focus: !s.focus })),
+  options: DEFAULT_OPTIONS,
+  restoreOptions: () => set({ options: loadOptions() }),
+  setOptions: (patch) => {
+    const options = { ...get().options, ...patch };
+    saveOptions(options);
+    set({ options });
+  },
 }));
 
 /** Acompanha uma resposta (nova ou retomada); se a tela trocar de conversa, só para de assistir. */

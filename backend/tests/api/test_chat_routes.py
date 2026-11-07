@@ -101,3 +101,23 @@ async def test_conversation_meta(api: httpx.AsyncClient) -> None:
     import uuid as _uuid
 
     assert (await api.get(f"/api/v1/conversations/{_uuid.uuid4()}")).status_code == 404
+
+
+async def test_message_accepts_only_known_models_and_efforts(api: httpx.AsyncClient) -> None:
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    url = f"/api/v1/conversations/{cid}/messages"
+    for bad in ({"model": "claude-haiku-5-5"}, {"effort": "max"}, {"effort": "low"}):
+        assert (await api.post(url, json={"text": "oi", **bad})).status_code == 422
+    ok = {"text": "oi", "model": "claude-opus-5-5", "effort": "xhigh", "brief": True}
+    assert (await api.post(url, json=ok)).status_code == 200
+
+
+async def test_message_choice_is_passed_to_the_agent(bible_db: AsyncSession, api: httpx.AsyncClient) -> None:
+    runner = FakeAgentRunner(["Paz."])
+    api._transport.app.dependency_overrides[get_agent_runner] = lambda: runner  # type: ignore[attr-defined]
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    body = {"text": "oi", "model": "claude-sonnet-5-5", "effort": "high", "brief": True}
+    await api.post(f"/api/v1/conversations/{cid}/messages", json=body)
+    call = runner.calls[0]
+    assert call["model"] == "claude-sonnet-5-5" and call["effort"] == "high"
+    assert "[Pedido de resposta breve" in call["prompt"]

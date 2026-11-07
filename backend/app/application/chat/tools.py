@@ -95,8 +95,8 @@ SPECS: dict[str, tuple[str, dict[str, Any]]] = {
     ),
     "pesquisar_web_serper": (
         "Pesquisa na web (Google): interpretações de estudiosos e tradições, contexto histórico, cultural ou "
-        "arqueológico. No máximo 8 pesquisas por resposta; mostra quantas fontes você já reuniu. Nunca use como "
-        "fonte de texto bíblico. Cite sempre o link.",
+        "arqueológico. Dispare as pesquisas em paralelo, na mesma rodada. No máximo 8 pesquisas por resposta; "
+        "mostra quantas fontes você já reuniu. Nunca use como fonte de texto bíblico. Cite sempre o link.",
         _obj({"consulta": _STR}, ["consulta"]),
     ),
 }
@@ -136,6 +136,7 @@ def _passage_json(p: ResolvedPassage) -> dict[str, Any]:
 
 
 MAX_WEB_SEARCHES = 8
+DEFINITION_CHARS = 160
 MIN_WEB_SOURCES = 4
 
 
@@ -193,7 +194,9 @@ class ToolExecutor:
                 "glosa_contexto_en": w.gloss_en,
                 "lema": lex[w.strong].lemma if w.strong in lex else None,
                 "significado_en": lex[w.strong].gloss if w.strong in lex else None,
-                "definicao": _TAGS.sub("", lex[w.strong].definition)[:400].strip() if w.strong in lex else None,
+                "definicao": _TAGS.sub("", lex[w.strong].definition)[:DEFINITION_CHARS].strip()
+                if w.strong in lex
+                else None,
             }
             for w in words
         ]
