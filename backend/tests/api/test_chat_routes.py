@@ -129,3 +129,19 @@ async def test_study_plan_choice_is_passed_to_the_agent(bible_db: AsyncSession, 
     cid = (await api.post("/api/v1/conversations")).json()["id"]
     await api.post(f"/api/v1/conversations/{cid}/messages", json={"text": "A graça", "plan": True})
     assert "[Pedido de plano de estudo" in runner.calls[0]["prompt"]
+
+
+async def test_video_choice_is_passed_to_the_agent(bible_db: AsyncSession, api: httpx.AsyncClient) -> None:
+    runner = FakeAgentRunner(["Pacote."])
+    api._transport.app.dependency_overrides[get_agent_runner] = lambda: runner  # type: ignore[attr-defined]
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    await api.post(f"/api/v1/conversations/{cid}/messages", json={"text": "Querubins", "video": True})
+    assert "[Pedido de vídeo viral" in runner.calls[0]["prompt"]
+
+
+async def test_complex_choice_is_passed_to_the_agent(bible_db: AsyncSession, api: httpx.AsyncClient) -> None:
+    runner = FakeAgentRunner(["Estudo."])
+    api._transport.app.dependency_overrides[get_agent_runner] = lambda: runner  # type: ignore[attr-defined]
+    cid = (await api.post("/api/v1/conversations")).json()["id"]
+    await api.post(f"/api/v1/conversations/{cid}/messages", json={"text": "A graça", "complex": True})
+    assert "[Pedido de estudo complexo" in runner.calls[0]["prompt"]

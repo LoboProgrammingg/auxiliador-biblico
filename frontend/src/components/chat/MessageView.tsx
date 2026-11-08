@@ -6,6 +6,7 @@ import { formatTokens, toBlocks } from "@/lib/segments";
 import { useChat, type UiMessage } from "@/stores/chat";
 import type { IssueKind, Segment } from "@/types/api";
 import { ChiasmCard } from "./ChiasmCard";
+import { ThinkerCard } from "./ThinkerCard";
 import { MapCard } from "./MapCard";
 import { TimelineCard } from "./TimelineCard";
 import { VerseCard } from "./VerseCard";
@@ -69,6 +70,7 @@ export function AssistantBody({ segments }: { segments: Segment[] }) {
           if (segment.type === "map") return <MapCard key={i} reference={segment.reference} places={segment.places} />;
           if (segment.type === "chiasm")
             return <ChiasmCard key={i} reference={segment.reference} book={segment.book} parts={segment.parts} />;
+          if (segment.type === "thinker") return <ThinkerCard key={i} thinker={segment} />;
           return null;
         }
         const first = blocks.findIndex((b) => b.kind === "markdown") === i;

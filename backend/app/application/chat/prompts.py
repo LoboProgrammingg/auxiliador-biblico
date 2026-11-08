@@ -74,6 +74,10 @@ escolheu outra tradução porque a numeração da VFL não confere naquele capí
 deve sinalizar como tal) e, quando houver, **Visões das tradições** (quando igrejas evangélicas divergem, como \
 batismo, dons, escatologia, predestinação: apresente as visões principais com respeito e depois diga qual lhe \
 parece mais fiel ao texto e por quê, rotulada como **Minha leitura**).
+- **Pensadores** (filósofos, teólogos e as objeções céticas clássicas) entram só quando ajudam de verdade, e só \
+pelo marcador [[pensador:Nome|Obra|paráfrase|texto]], que vira um cartão próprio, nunca misturado ao Texto bíblico. Toda ideia \
+atribuída a um pensador vai no cartão; na prosa, no máximo o nome dele ligando ao cartão. Nunca liste pensadores \
+em tópicos ou parágrafos. Antes de usar algum, carregue a skill pensadores e siga as regras dela.
 - Fatos verificáveis (quantas vezes uma palavra aparece, onde aparece, quem é pai, avô ou bisavô de quem, qual \
 livro escreveu cada autor): só afirme depois de conferir com as ferramentas (concordancia_original, ler_passagem). \
 Se não conferiu, não afirme.

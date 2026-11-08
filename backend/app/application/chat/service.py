@@ -7,9 +7,17 @@ from dataclasses import replace
 from typing import Any
 
 from app.application.bible.passages import PassageService
-from app.application.chat.effort import asks_opinion, effort_for, wants_brief, wants_plan
+from app.application.chat.effort import (
+    asks_opinion,
+    effort_for,
+    wants_brief,
+    wants_complex,
+    wants_plan,
+    wants_thinkers,
+)
 from app.application.chat.events import ChatEvent, error_event, passage_payload
 from app.application.chat.ports import AgentDone, AgentRunner, AgentText, AgentTools, AgentToolStart, TokenUsage
+from app.application.chat.skill_text import skill_body
 from app.application.chat.tools import STATUS, ToolExecutor, ToolOutcome, allowed_tool_names, build_mcp_server
 from app.application.judgments.crisis import detect_crisis
 from app.application.judgments.service import CRISIS_THRESHOLD, JudgmentService, sentence_after, triage_block
@@ -23,6 +31,7 @@ from app.application.verification.markers import (
     RouteOut,
     StreamOut,
     TextOut,
+    ThinkerOut,
     ThreadOut,
     TimelineOut,
     VerseOut,
@@ -45,7 +54,55 @@ BRIEF_BLOCK = (
 PLAN_BLOCK = (
     "[Pedido de plano de estudo: siga a seção Plano de estudo; monte o plano, não desenvolva os tópicos ainda.]"
 )
+VIDEO_BLOCK = (
+    "[Pedido de vídeo viral para o canal Pedras Clamam (botão Vídeo TikTok): siga à risca as instruções abaixo e "
+    "entregue o pacote completo no Formato de entrega.]\n\n" + skill_body("video-viral")
+)
+VIDEO_EFFORT = "high"
+COMPLEX_BLOCK = (
+    "[Pedido de estudo complexo (botão Complexo ou mensagem começando com Complexo): siga à risca as instruções "
+    "abaixo; destrinche a pergunta inteira e faça todas as conexões, sem deixar nada para trás. Neste pedido valem "
+    "as rodadas e as pesquisas descritas aqui, não os limites normais.]\n\n" + skill_body("estudo-complexo")
+)
+THINKERS_BLOCK = (
+    "[Pensadores: este tema costuma envolver filósofos e objeções céticas. Carregue a skill pensadores; toda ideia "
+    "atribuída a um pensador vai no cartão [[pensador:...]], nunca em tópicos ou parágrafos do texto.]"
+)
+COMPLEX_EFFORT = "xhigh"
+BRIEF_COMBINED_BLOCK = (
+    "[Resposta breve combinada com outro modo: faça a pesquisa e as etapas dos outros modos normalmente; só o texto "
+    "final sai no formato mais enxuto possível.]"
+)
+_EFFORT_RANK = {"medium": 0, "high": 1, "xhigh": 2}
+
+
+def _with_modes(
+    prompt: str, effort: str | None, *, complex: bool, plan: bool, video: bool, brief: bool
+) -> tuple[str, str | None]:
+    """Os botões se somam: cada modo ligado põe o seu bloco; o esforço padrão é o maior entre os modos."""
+    blocks = [b for on, b in ((complex, COMPLEX_BLOCK), (plan, PLAN_BLOCK), (video, VIDEO_BLOCK)) if on]
+    if brief:
+        blocks.append(BRIEF_COMBINED_BLOCK if blocks else BRIEF_BLOCK)
+    if len(blocks) > 1:
+        names = [
+            n
+            for on, n in (
+                (complex, "estudo complexo"),
+                (plan, "plano de estudo"),
+                (video, "vídeo viral"),
+                (brief, "resposta breve"),
+            )
+            if on
+        ]
+        blocks.append(f"[Modos combinados: {' + '.join(names)}. Cumpra todos juntos, sem descartar nenhum.]")
+    defaults = [e for on, e in ((complex, COMPLEX_EFFORT), (video, VIDEO_EFFORT)) if on]
+    if effort is None and defaults:
+        effort = max(defaults, key=_EFFORT_RANK.__getitem__)
+    return "\n\n".join([prompt, *blocks]), effort
+
+
 DEFAULT_TIMEOUT_S = 300.0
+DEFAULT_LONG_TIMEOUT_S = 1200.0
 NATIVE_STATUS = {"WebSearch": "Pesquisando na web…"}
 
 
@@ -117,6 +174,18 @@ class _Turn:
             payload = {"marker": out.marker, "reference": out.reference, "links": out.links, "books": out.books}
             self.segments.append({"type": "thread", **payload})
             return ChatEvent("thread", payload)
+        if isinstance(out, ThinkerOut):
+            payload = {
+                "marker": out.marker,
+                "name": out.name,
+                "period": out.period,
+                "work": out.work,
+                "kind": out.kind,
+                "text": out.text,
+                "objection": out.objection,
+            }
+            self.segments.append({"type": "thinker", **payload})
+            return ChatEvent("thinker", payload)
         assert isinstance(out, InvalidRefOut)
         self.segments.append({"type": "invalid_reference", "marker": out.marker})
         return ChatEvent("invalid_reference", {"marker": out.marker})
@@ -133,12 +202,14 @@ class ChatService:
         web_serper: bool,
         judgments: JudgmentService | None = None,
         timeout_s: float = DEFAULT_TIMEOUT_S,
+        long_timeout_s: float = DEFAULT_LONG_TIMEOUT_S,
         study_effort: str | None = None,
     ) -> None:
         self._conversations, self._passages, self._repo = conversations, passages, repo
         self._executor, self._runner, self._web_serper = executor, runner, web_serper
         self._judgments = judgments or JudgmentService(None)
         self._timeout_s, self._study_effort = timeout_s, study_effort
+        self._long_timeout_s = long_timeout_s
 
     async def _review(self, turn: "_Turn", user_text: str) -> list[dict[str, Any]]:
         """Checagens após a resposta: texto (determinístico), teologia e fidelidade (Jev)."""
@@ -196,8 +267,11 @@ class ChatService:
         effort: str | None = None,
         brief: bool = False,
         plan: bool = False,
+        video: bool = False,
+        complex: bool = False,
     ) -> AsyncIterator[ChatEvent]:
-        """Escolhas da tela vencem o padrão; brief liga a resposta curta e plan, o plano de estudo."""
+        """Escolhas da tela vencem o padrão: brief (resposta curta), plan (plano de estudo), video (vídeo viral) e
+        complex (estudo exaustivo)."""
         text = user_text.strip()
         if not text or len(user_text) > MAX_TEXT:
             yield error_event("texto_invalido")
@@ -208,7 +282,7 @@ class ChatService:
             return
         try:
             async with lock:
-                async for event in self._send_locked(conversation_id, text, model, effort, brief, plan):
+                async for event in self._send_locked(conversation_id, text, model, effort, brief, plan, video, complex):
                     yield event
         finally:
             if not lock.locked():
@@ -222,6 +296,8 @@ class ChatService:
         effort: str | None,
         brief: bool,
         plan: bool,
+        video: bool = False,
+        complex: bool = False,
     ) -> AsyncIterator[ChatEvent]:
         conversation = await self._conversations.get(conversation_id)
         if conversation is None:
@@ -248,13 +324,20 @@ class ChatService:
             prompt = f"{prompt}\n\n{await self._memory_block()}"
         if asks_opinion(text):
             prompt = f"{prompt}\n\n{OPINION_BLOCK}"
-        if plan or wants_plan(text):
-            prompt = f"{prompt}\n\n{PLAN_BLOCK}"
-        elif brief or wants_brief(text):
-            prompt = f"{prompt}\n\n{BRIEF_BLOCK}"
+        if wants_thinkers(text):
+            prompt = f"{prompt}\n\n{THINKERS_BLOCK}"
+        complex = complex or wants_complex(text)
+        prompt, effort = _with_modes(
+            prompt,
+            effort,
+            complex=complex,
+            plan=plan or wants_plan(text),
+            video=video,
+            brief=brief or wants_brief(text),
+        )
         processor = MarkerStreamProcessor(self._passages)
         done: AgentDone | None = None
-        deadline = time.monotonic() + self._timeout_s
+        deadline = time.monotonic() + (self._long_timeout_s if video or complex else self._timeout_s)
         effort = effort or effort_for(text, self._study_effort)
         agent = aiter(self._runner.run(prompt, conversation.agent_session_id, self._tools(pending), effort, model))
         try:
