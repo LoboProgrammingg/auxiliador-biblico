@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     claude_effort: str = "medium"
     claude_effort_estudo: str = "high"
     agent_timeout_s: float = 300.0
+    agent_timeout_longo_s: float = 1200.0
     voyage_api_key: str | None = None
     embed_model: str = "voyage-4-large"
     rerank_model: str = "rerank-3"

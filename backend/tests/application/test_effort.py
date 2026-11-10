@@ -132,3 +132,24 @@ def test_other_texts_are_not_study_plan_requests(text: str) -> None:
     from app.application.chat.effort import wants_plan
 
     assert not wants_plan(text)
+
+
+def test_wants_complex_only_when_message_starts_with_the_word() -> None:
+    from app.application.chat.effort import wants_complex
+
+    assert wants_complex("Complexo: a aliança com Abraão")
+    assert wants_complex("  complexo o que é a graça?")
+    assert wants_complex("COMPLEXO - Romanos 9")
+    assert not wants_complex("Esse tema é complexo demais")
+    assert not wants_complex("Complexidade da Trindade")
+
+
+def test_wants_thinkers_on_philosophy_and_skeptic_topics() -> None:
+    from app.application.chat.effort import wants_thinkers
+
+    assert wants_thinkers("Se Deus é bom, por que existe o mal?")
+    assert wants_thinkers("O que os filósofos dizem sobre fé e razão?")
+    assert wants_thinkers("Como responder a um ateu que diz que Deus não existe?")
+    assert wants_thinkers("Nietzsche disse que Deus está morto")
+    assert not wants_thinkers("O que significa graça na Bíblia?")
+    assert not wants_thinkers("Me explique João 3")

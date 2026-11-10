@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { effortFor, requestModes } from "@/lib/modes";
 import { type ChatOptions, DEFAULT_OPTIONS, loadOptions, saveOptions } from "@/lib/chatOptions";
 import { applyEvent, needsReattach } from "@/lib/segments";
 import { api, attachStream, sendMessage } from "@/services/api";
@@ -44,6 +45,10 @@ interface ChatState {
   setOptions: (patch: Partial<ChatOptions>) => void;
   studyPlan: boolean;
   setStudyPlan: (on: boolean) => void;
+  tiktokVideo: boolean;
+  setTiktokVideo: (on: boolean) => void;
+  complexMode: boolean;
+  setComplexMode: (on: boolean) => void;
 }
 
 let counter = 0;
@@ -109,8 +114,9 @@ export const useChat = create<ChatState>((set, get) => ({
     }
     set((s) => ({ messages: [...s.messages, { key: key(), role: "user", text, segments: [] }] }));
     const target = id;
-    const options = { ...get().options, plan: get().studyPlan };
-    set({ studyPlan: false });
+    const modes = requestModes({ plan: get().studyPlan, video: get().tiktokVideo, complex: get().complexMode });
+    const options = { ...get().options, ...modes, effort: effortFor(get().options.effort, modes) };
+    set({ studyPlan: false, tiktokVideo: false, complexMode: false });
     await follow(target, (signal) => sendMessage(target, text, options, signal));
   },
 
@@ -126,6 +132,10 @@ export const useChat = create<ChatState>((set, get) => ({
   },
   studyPlan: false,
   setStudyPlan: (on) => set({ studyPlan: on }),
+  tiktokVideo: false,
+  setTiktokVideo: (on) => set({ tiktokVideo: on }),
+  complexMode: false,
+  setComplexMode: (on) => set({ complexMode: on }),
 }));
 
 /** Acompanha uma resposta (nova ou retomada); se a tela trocar de conversa, só para de assistir. */

@@ -1,3 +1,4 @@
+import logging
 import re
 import unicodedata
 from dataclasses import dataclass
@@ -5,6 +6,7 @@ from typing import Any
 
 from app.application.bible.passages import PassageService
 from app.application.chat.events import passage_payload
+from app.application.verification.thinkers import find_thinker
 from app.domain.bible.books import BOOKS
 from app.domain.bible.entities import Person, Place, ResolvedPassage
 from app.domain.bible.errors import InvalidReference
@@ -13,10 +15,14 @@ from app.domain.bible.references import VerseRange, format_reference
 MARKER_RE = re.compile(r"\[\[([^\[\]|]{1,60})(?:\|([A-Za-z0-9]{2,10}))?\]\]")
 VISUAL_RE = re.compile(r"\[\[(linha|mapa|quiasmo|rota|fio):([^\[\]]{1,900})\]\]")
 SECTION_RE = re.compile(r"^\s*(\d{1,3})\s*[-–]\s*(\d{1,3})\s*=\s*(.{1,80}?)\s*$")
+THINKER_RE = re.compile(r"\[\[pensador:([^\[\]]{1,1150})\]\]")
+MAX_THINKER_TEXT = 900
+THINKER_KINDS = {"citacao": "citação", "parafrase": "paráfrase"}
 CHIASM_PART_RE = re.compile(r"^\s*(\d{1,3})(?:\s*[-–]\s*(\d{1,3}))?\s*=\s*(.{1,80}?)\s*$")
+logger = logging.getLogger(__name__)
 MAX_HELD = 80
-MAX_HELD_VISUAL = 950
-VISUAL_PREFIXES = ("[[linha:", "[[mapa:", "[[quiasmo:", "[[rota:", "[[fio:")
+MAX_HELD_VISUAL = 1200
+VISUAL_PREFIXES = ("[[linha:", "[[mapa:", "[[quiasmo:", "[[rota:", "[[fio:", "[[pensador:")
 DIRECTIONS = {"oriente", "ocidente", "norte", "sul", "leste", "oeste"}
 MAX_LINKS = 6
 MIN_KEY_CHARS = 40
@@ -76,7 +82,20 @@ class ThreadOut:
     books: list[dict[str, Any]]
 
 
-StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut | ChiasmOut | RouteOut | ThreadOut
+@dataclass(frozen=True)
+class ThinkerOut:
+    """Ideia de um pensador: cartão próprio, nunca misturado ao texto bíblico nem à checagem de citações."""
+
+    marker: str
+    name: str
+    period: str
+    work: str
+    kind: str
+    text: str
+    objection: bool
+
+
+StreamOut = TextOut | VerseOut | InvalidRefOut | TimelineOut | MapOut | ChiasmOut | RouteOut | ThreadOut | ThinkerOut
 
 
 def _places_between(places: list[Place], start: int, end: int) -> list[dict[str, object]]:
@@ -235,7 +254,25 @@ class MarkerStreamProcessor:
         ]
         return MapOut(marker, format_reference(chapter), items)
 
+    @staticmethod
+    def _thinker(marker: str) -> StreamOut | None:
+        """Nome|Obra|tipo|texto, ou Nome|Obra|texto (paráfrase). Se o 3º campo não for um tipo, ele é o resumo e o
+        4º (frase "literal" não conferida) é descartado. Nome fora do catálogo ou texto vazio/longo: descartado."""
+        match = THINKER_RE.fullmatch(marker)
+        parts = [p.strip() for p in match.group(1).split("|")] if match is not None else []
+        thinker = find_thinker(re.sub(r"\s*\(.*?\)\s*", " ", parts[0])) if len(parts) in (3, 4) else None
+        kind = "paráfrase"
+        text = parts[2] if len(parts) >= 3 else ""
+        if len(parts) == 4 and (known := THINKER_KINDS.get(_key(parts[2]))) is not None:
+            kind, text = known, parts[3]
+        if thinker is None or not parts[1] or not text or len(text) > MAX_THINKER_TEXT or len(parts[1]) > 160:
+            logger.warning("cartão de pensador descartado: %s", marker[:200])
+            return None
+        return ThinkerOut(marker, thinker.name, thinker.period, parts[1], kind, text, thinker.objection)
+
     async def _resolve(self, marker: str) -> StreamOut | None:
+        if marker.startswith("[[pensador:"):
+            return self._thinker(marker)
         visual = VISUAL_RE.fullmatch(marker)
         if visual is not None:
             try:

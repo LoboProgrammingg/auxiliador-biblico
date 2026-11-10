@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { EFFORTS, type EffortId, MODELS, type ModelId } from "@/lib/chatOptions";
+import { placeholderFor } from "@/lib/modes";
 import { useChat } from "@/stores/chat";
 
 export const WORD_FOR_ME = "✨ Uma palavra pra mim";
@@ -61,6 +62,10 @@ export function Composer({ onSent }: { onSent?: () => void }) {
   const restoreOptions = useChat((s) => s.restoreOptions);
   const studyPlan = useChat((s) => s.studyPlan);
   const setStudyPlan = useChat((s) => s.setStudyPlan);
+  const tiktokVideo = useChat((s) => s.tiktokVideo);
+  const setTiktokVideo = useChat((s) => s.setTiktokVideo);
+  const complexMode = useChat((s) => s.complexMode);
+  const setComplexMode = useChat((s) => s.setComplexMode);
   const input = useRef<HTMLTextAreaElement>(null);
 
   useEffect(restoreOptions, [restoreOptions]);
@@ -95,11 +100,7 @@ export function Composer({ onSent }: { onSent?: () => void }) {
           }}
           rows={2}
           maxLength={8000}
-          placeholder={
-            studyPlan
-              ? "Qual tema você quer estudar? Ex.: a aliança de Deus com Abraão"
-              : "Escreva o que está no seu coração..."
-          }
+          placeholder={placeholderFor({ plan: studyPlan, video: tiktokVideo, complex: complexMode })}
           className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[1.0625rem] leading-relaxed placeholder:text-tinta-suave/70 focus:outline-none focus-visible:outline-none"
         />
         <div className="@container flex flex-wrap items-center gap-1.5 px-2.5 pb-2.5">
@@ -126,6 +127,31 @@ export function Composer({ onSent }: { onSent?: () => void }) {
           >
             <span className="@min-[44rem]:hidden">Plano</span>
             <span className="hidden @min-[44rem]:inline">Plano de estudo</span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={complexMode}
+            onClick={() => {
+              setComplexMode(!complexMode);
+              input.current?.focus();
+            }}
+            title="Estudo exaustivo: destrincha a pergunta e faz todas as conexões (ou comece a mensagem com Complexo)"
+            className={`${toggle(complexMode)} order-3 @min-[44rem]:order-none`}
+          >
+            Complexo
+          </button>
+          <button
+            type="button"
+            aria-pressed={tiktokVideo}
+            onClick={() => {
+              setTiktokVideo(!tiktokVideo);
+              input.current?.focus();
+            }}
+            title="Pacote completo de um vídeo viral para o TikTok e o YouTube Shorts"
+            className={`${toggle(tiktokVideo)} order-3 @min-[44rem]:order-none`}
+          >
+            <span className="@min-[44rem]:hidden">Vídeo</span>
+            <span className="hidden @min-[44rem]:inline">Vídeo TikTok</span>
           </button>
           <button
             type="button"

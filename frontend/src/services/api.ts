@@ -1,4 +1,5 @@
 import type { ChatOptions } from "@/lib/chatOptions";
+import type { Modes } from "@/lib/modes";
 import { parseSSE } from "@/lib/sse";
 import type {
   ChatEvent,
@@ -106,7 +107,7 @@ async function* readEvents(response: Response): AsyncGenerator<ChatEvent> {
 export async function* sendMessage(
   conversationId: string,
   text: string,
-  options: ChatOptions & { plan: boolean },
+  options: ChatOptions & Modes,
   signal: AbortSignal,
 ): AsyncGenerator<ChatEvent> {
   const response = await fetch(`${API_URL}/api/v1/conversations/${conversationId}/messages`, {

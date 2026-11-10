@@ -27,4 +27,9 @@ describe("parseSSE", () => {
     );
     expect(r.events.map((e) => e.event)).toEqual(["timeline", "map"]);
   });
+
+  test("keeps thinker events", () => {
+    const r = parseSSE('event: thinker\ndata: {"marker":"m","name":"Blaise Pascal"}\n\n', "");
+    expect(r.events.map((e) => e.event)).toEqual(["thinker"]);
+  });
 });

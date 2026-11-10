@@ -105,3 +105,24 @@ describe("token usage", () => {
     expect(formatTokens(1250000)).toBe("1,3 mi");
   });
 });
+
+describe("thinker cards", () => {
+  const thinker = {
+    marker: "[[pensador:Pascal|Pensamentos|paráfrase|O coração tem razões.]]",
+    name: "Blaise Pascal",
+    period: "1623–1662",
+    work: "Pensamentos",
+    kind: "paráfrase" as const,
+    text: "O coração tem razões.",
+    objection: false,
+  };
+
+  test("thinker event becomes its own segment and block, apart from the text", () => {
+    let s: Segment[] = applyEvent([], { event: "text", data: { text: "Veja:\n" } });
+    s = applyEvent(s, { event: "thinker", data: thinker });
+    s = applyEvent(s, { event: "text", data: { text: "\nE a Bíblia:" } });
+    expect(s[1]).toEqual({ type: "thinker", ...thinker });
+    expect(toBlocks(s).map((b) => b.kind)).toEqual(["markdown", "thinker", "markdown"]);
+  });
+});
+

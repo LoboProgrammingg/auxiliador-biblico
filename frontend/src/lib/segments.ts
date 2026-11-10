@@ -22,6 +22,8 @@ export function applyEvent(segments: Segment[], ev: ChatEvent): Segment[] {
       return [...segments, { type: "map", ...ev.data }];
     case "chiasm":
       return [...segments, { type: "chiasm", ...ev.data }];
+    case "thinker":
+      return [...segments, { type: "thinker", ...ev.data }];
     case "issues":
       return [...segments, ...ev.data.items.map((i) => ({ type: "issue" as const, ...i }))];
     case "crisis":
@@ -50,7 +52,8 @@ export type Block =
   | { kind: "card"; index: number }
   | { kind: "timeline"; index: number }
   | { kind: "map"; index: number }
-  | { kind: "chiasm"; index: number };
+  | { kind: "chiasm"; index: number }
+  | { kind: "thinker"; index: number };
 
 function isInline(segments: Segment[], i: number): boolean {
   const prev = segments[i - 1];
@@ -69,7 +72,12 @@ export function toBlocks(segments: Segment[]): Block[] {
   };
   segments.forEach((segment, i) => {
     if (segment.type === "text") markdown += segment.text;
-    else if (segment.type === "timeline" || segment.type === "map" || segment.type === "chiasm") {
+    else if (
+      segment.type === "timeline" ||
+      segment.type === "map" ||
+      segment.type === "chiasm" ||
+      segment.type === "thinker"
+    ) {
       flush();
       blocks.push({ kind: segment.type, index: i });
     }

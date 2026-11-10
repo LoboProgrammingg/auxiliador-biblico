@@ -377,12 +377,13 @@ async def test_no_usage_event_without_usage(bible_db: AsyncSession) -> None:
     assert "usage" not in [e.name for e in events]
 
 
-async def test_study_plan_button_adds_plan_block_and_wins_over_brief(bible_db: AsyncSession) -> None:
+async def test_study_plan_with_brief_combines_and_brief_only_trims_the_text(bible_db: AsyncSession) -> None:
     runner = FakeAgentRunner(["Plano."])
     svc = make_service(bible_db, runner)
     [e async for e in svc.send(await new_conversation(bible_db), "A aliança com Abraão", brief=True, plan=True)]
     prompt = runner.calls[0]["prompt"]
-    assert "[Pedido de plano de estudo" in prompt and "[Pedido de resposta breve" not in prompt
+    assert "[Pedido de plano de estudo" in prompt and "[Resposta breve combinada" in prompt
+    assert "[Pedido de resposta breve" not in prompt
 
 
 async def test_study_plan_by_text_and_topic_follow_up_without_block(bible_db: AsyncSession) -> None:
@@ -393,3 +394,112 @@ async def test_study_plan_by_text_and_topic_follow_up_without_block(bible_db: As
     await collect(svc, cid, "Fale sobre o tópico 1")
     assert "[Pedido de plano de estudo" in runner.calls[0]["prompt"]
     assert "[Pedido de plano de estudo" not in runner.calls[1]["prompt"]
+
+
+async def test_thinker_card_is_saved_and_kept_out_of_bible_review(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Pense nisto:\n\n", "[[pensador:Pascal|Pensamentos|paráfrase|O coração tem razões.]]"])
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    events = await collect(svc, cid, "Fé e razão")
+    card = next(e for e in events if e.name == "thinker")
+    assert card.data["name"] == "Blaise Pascal" and card.data["kind"] == "paráfrase"
+    messages = await SqlConversationRepository(bible_db).messages(cid)
+    segments = messages[-1].segments
+    assert any(s["type"] == "thinker" for s in segments)
+    assert all("coração" not in s.get("text", "") for s in segments if s["type"] == "text")
+
+
+async def test_video_button_adds_video_block_with_high_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Pacote."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "Querubins", video=True)]
+    call = runner.calls[0]
+    assert "[Pedido de vídeo viral" in call["prompt"] and "[Modos combinados" not in call["prompt"]
+    assert call["effort"] == "high"
+
+
+async def test_video_button_keeps_chosen_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Pacote."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "Querubins", effort="xhigh", video=True)]
+    assert runner.calls[0]["effort"] == "xhigh"
+
+
+async def test_without_video_button_prompt_has_no_video_block(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Resposta."])
+    svc = make_service(bible_db, runner)
+    await collect(svc, await new_conversation(bible_db), "Quero gerar um vídeo viral para o TikTok sobre querubins")
+    assert "[Pedido de vídeo viral" not in runner.calls[0]["prompt"]
+
+
+async def test_complex_button_adds_complex_block_with_highest_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estudo."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "A graça", complex=True)]
+    call = runner.calls[0]
+    assert "[Pedido de estudo complexo" in call["prompt"] and call["effort"] == "xhigh"
+
+
+async def test_complex_by_first_word_and_not_by_casual_use(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Estudo."])
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "Complexo: a aliança com Abraão")
+    await collect(svc, cid, "Esse tema é complexo demais")
+    assert "[Pedido de estudo complexo" in runner.calls[0]["prompt"]
+    assert "[Pedido de estudo complexo" not in runner.calls[1]["prompt"]
+
+
+async def test_all_buttons_combine_with_the_highest_effort(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Tudo."])
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    [e async for e in svc.send(cid, "Querubins", brief=True, plan=True, video=True, complex=True)]
+    call = runner.calls[0]
+    for block in ("[Pedido de estudo complexo", "[Pedido de plano de estudo", "[Pedido de vídeo viral"):
+        assert block in call["prompt"]
+    assert "[Resposta breve combinada" in call["prompt"] and "[Modos combinados" in call["prompt"]
+    assert call["effort"] == "xhigh"
+
+
+async def test_brief_alone_keeps_the_old_block(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Curto."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "O que é graça?", brief=True)]
+    prompt = runner.calls[0]["prompt"]
+    assert "[Pedido de resposta breve" in prompt and "[Modos combinados" not in prompt
+
+
+async def test_video_and_complex_blocks_carry_the_whole_skill_text(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Tudo."])
+    svc = make_service(bible_db, runner)
+    [e async for e in svc.send(await new_conversation(bible_db), "Querubins", video=True, complex=True)]
+    prompt = runner.calls[0]["prompt"]
+    assert "Formato de entrega" in prompt and "Victor Power" in prompt
+    assert "Checagem final antes de enviar" in prompt
+    assert "name: video-viral" not in prompt
+
+
+async def test_thinker_hint_only_on_philosophy_questions(bible_db: AsyncSession) -> None:
+    runner = FakeAgentRunner(["Resposta."])
+    svc = make_service(bible_db, runner)
+    cid = await new_conversation(bible_db)
+    await collect(svc, cid, "Se Deus é bom, por que existe o mal?")
+    await collect(svc, cid, "O que significa graça?")
+    assert "[Pensadores:" in runner.calls[0]["prompt"]
+    assert "[Pensadores:" not in runner.calls[1]["prompt"]
+
+
+async def test_long_modes_get_the_longer_deadline(bible_db: AsyncSession) -> None:
+    script = ["a", "b", "c", "d"]
+    for flags in ({"video": True}, {"complex": True}):
+        runner = FakeAgentRunner(script, delay=0.05)
+        svc = make_service(bible_db, runner, timeout_s=0.08, long_timeout_s=5.0)
+        events = [e async for e in svc.send(await new_conversation(bible_db), "Querubins", **flags)]
+        assert not any(e.name == "error" for e in events), flags
+    runner = FakeAgentRunner(script, delay=0.05)
+    svc = make_service(bible_db, runner, timeout_s=0.08, long_timeout_s=5.0)
+    events = await collect(svc, await new_conversation(bible_db), "Complexo: os querubins")
+    assert not any(e.name == "error" for e in events)
+    events = await collect(svc, await new_conversation(bible_db), "oi")
+    assert any(e.name == "error" and e.data["code"] == "tempo_esgotado" for e in events)

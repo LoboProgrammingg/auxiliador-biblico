@@ -47,12 +47,23 @@ export interface ChiasmPart {
   title: string;
 }
 
+export interface Thinker {
+  marker: string;
+  name: string;
+  period: string;
+  work: string;
+  kind: "citação" | "paráfrase";
+  text: string;
+  objection: boolean;
+}
+
 export type Segment =
   | { type: "text"; text: string }
   | { type: "timeline"; marker: string; reference: string; book: string; sections: TimelineSection[] }
   | { type: "map"; marker: string; reference: string; places: MapPlace[] }
   | { type: "chiasm"; marker: string; reference: string; book: string; parts: ChiasmPart[] }
   | { type: "verse"; marker: string; passage: Passage }
+  | ({ type: "thinker" } & Thinker)
   | { type: "invalid_reference"; marker: string }
   | { type: "issue"; kind: IssueKind; excerpt: string; marker?: string; correction?: string }
   | { type: "crisis"; numero: string; url: string }
@@ -75,6 +86,7 @@ export type ChatEvent =
   | { event: "timeline"; data: { marker: string; reference: string; book: string; sections: TimelineSection[] } }
   | { event: "map"; data: { marker: string; reference: string; places: MapPlace[] } }
   | { event: "chiasm"; data: { marker: string; reference: string; book: string; parts: ChiasmPart[] } }
+  | { event: "thinker"; data: Thinker }
   | { event: "status"; data: { label: string } }
   | { event: "memory_saved"; data: { topic: string } }
   | { event: "crisis"; data: { numero: string; url: string } }

@@ -71,6 +71,8 @@ class MessageIn(BaseModel):
     effort: Literal["medium", "high", "xhigh"] | None = None
     brief: bool = False
     plan: bool = False
+    video: bool = False
+    complex: bool = False
 
 
 class ConversationOut(BaseModel):
@@ -129,6 +131,7 @@ def _chat_service(
         web is not None,
         judgments=judgments,
         timeout_s=settings.agent_timeout_s,
+        long_timeout_s=settings.agent_timeout_longo_s,
         study_effort=study_effort,
     )
 
@@ -213,7 +216,9 @@ async def send_message(
     async def turn() -> AsyncIterator[ChatEvent]:
         async with factory() as session:
             service = _chat_service(session, runner, embedder, reranker, judgments)
-            async for event in service.send(conversation_id, body.text, body.model, body.effort, body.brief, body.plan):
+            async for event in service.send(
+                conversation_id, body.text, body.model, body.effort, body.brief, body.plan, body.video, body.complex
+            ):
                 yield event
 
     job: ChatJob | None = jobs.start(conversation_id, turn)

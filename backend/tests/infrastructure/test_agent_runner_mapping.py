@@ -101,7 +101,7 @@ def test_runner_model_override(tmp_path) -> None:  # type: ignore[no-untyped-def
     assert runner._options(None, tools, None, "claude-opus-5-5").model == "claude-opus-5-5"
 
 
-def test_runner_loads_only_the_bundled_illustration_skill(tmp_path) -> None:  # type: ignore[no-untyped-def]
+def test_runner_loads_only_the_bundled_skills(tmp_path) -> None:  # type: ignore[no-untyped-def]
     from pathlib import Path
 
     from app.application.chat.ports import AgentTools
@@ -110,12 +110,22 @@ def test_runner_loads_only_the_bundled_illustration_skill(tmp_path) -> None:  # 
     options = ClaudeAgentRunner("m", "medium", tmp_path, False)._options(None, AgentTools({}, ["WebSearch"], None))  # type: ignore[arg-type]
     assert options.setting_sources == []
     assert options.plugins == [{"type": "local", "path": str(PLUGIN_DIR)}]
-    assert options.skills == SKILLS == ["auxiliador-biblico:ilustracoes"]
+    assert options.skills == SKILLS == ["auxiliador-biblico:ilustracoes", "auxiliador-biblico:pensadores"]
     skill = Path(PLUGIN_DIR) / "skills" / "ilustracoes" / "SKILL.md"
     body = skill.read_text(encoding="utf-8")
     assert body.startswith("---\nname: ilustracoes\n")
     for marker in ("[[linha:", "[[mapa:", "[[rota:", "[[quiasmo:", "[[fio:"):
         assert marker in body
+    thinkers = (Path(PLUGIN_DIR) / "skills" / "pensadores" / "SKILL.md").read_text(encoding="utf-8")
+    assert thinkers.startswith("---\nname: pensadores\n") and "[[pensador:" in thinkers
+    video = (Path(PLUGIN_DIR) / "skills" / "video-viral" / "SKILL.md").read_text(encoding="utf-8")
+    assert video.startswith("---\nname: video-viral\n")
+    for needed in ("Victor Power", "Single continuous shot", "[[", "Rosto de Jesus"):
+        assert needed in video
+    deep = (Path(PLUGIN_DIR) / "skills" / "estudo-complexo" / "SKILL.md").read_text(encoding="utf-8")
+    assert deep.startswith("---\nname: estudo-complexo\n")
+    for needed in ("concordancia_original", "referencias_cruzadas", "ilustracoes", "pensadores", "Fontes consultadas"):
+        assert needed in deep
 
 
 def test_system_prompt_points_to_the_skill_instead_of_carrying_it() -> None:

@@ -78,6 +78,18 @@ export function PrintAnswer({ segments, prefix }: { segments: Segment[]; prefix:
               <ChiasmDiagram parts={s.parts} />
             </Figure>
           );
+        if (s.type === "thinker")
+          return (
+            <aside key={i} className="pensador">
+              <p className="pensador-rotulo">
+                {s.objection ? "Objeção cética — não é texto bíblico" : "Pensador — não é texto bíblico"}
+              </p>
+              <p>{s.text}</p>
+              <p className="legenda">
+                {s.name} ({s.period}) · {s.work} · {s.kind === "citação" ? "citação conferida" : "paráfrase"}
+              </p>
+            </aside>
+          );
         return null;
       })}
       {errors.map((e, i) => <p key={`e${i}`} className="aviso">{e.message}</p>)}
