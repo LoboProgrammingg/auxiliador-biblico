@@ -174,3 +174,13 @@ def test_prompt_guides_study_plans_and_septuagint_lookups() -> None:
     assert "## Plano de estudo" in SYSTEM_PROMPT and "ordem cronológica" in SYSTEM_PROMPT
     assert "### Curiosidades" in SYSTEM_PROMPT and "fale sobre o tópico 1" in SYSTEM_PROMPT
     assert "Septuaginta" in SYSTEM_PROMPT
+
+
+def test_system_prompt_asks_for_clarity_and_explained_connections() -> None:
+    from app.application.chat.prompts import SYSTEM_PROMPT
+
+    assert "## Clareza" in SYSTEM_PROMPT and "adolescente de 15 anos" in SYSTEM_PROMPT
+    assert "## Ligações" in SYSTEM_PROMPT and "Toda ligação vem com o porquê" in SYSTEM_PROMPT
+    assert "caminhos de dois passos" in SYSTEM_PROMPT
+    assert "Transliteração solta, sem tradução, é proibida" in SYSTEM_PROMPT
+    assert "os estudiosos que li" in SYSTEM_PROMPT

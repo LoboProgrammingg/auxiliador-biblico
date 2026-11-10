@@ -33,6 +33,9 @@ class BibleRepository(ABC):
     async def cross_references(self, book_id: int, chapter: int, verse: int, limit: int) -> list[CrossReference]: ...
 
     @abstractmethod
+    async def range_cross_references(self, r: VerseRange, limit: int) -> list[CrossReference]: ...
+
+    @abstractmethod
     async def fulltext(self, query: str, translations: list[str], limit: int) -> list[PassageHit]: ...
 
     @abstractmethod

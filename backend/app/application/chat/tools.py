@@ -13,7 +13,7 @@ from app.application.chat.ports import WebSearch, WebSearchUnavailable
 from app.application.memory.service import MemoryService
 from app.domain.bible.entities import ResolvedPassage
 from app.domain.bible.errors import InvalidReference
-from app.domain.bible.references import format_reference
+from app.domain.bible.references import VerseRange, format_reference
 from app.domain.bible.repositories import BibleRepository
 from app.domain.memory.errors import InvalidMemoryContent, InvalidMemoryTopic
 
@@ -62,8 +62,9 @@ SPECS: dict[str, tuple[str, dict[str, Any]]] = {
         _obj({"referencia": _STR}, ["referencia"]),
     ),
     "referencias_cruzadas": (
-        "Lista passagens ligadas a um versículo (referências cruzadas, mais votadas primeiro), com prévia do texto. "
-        "Use para ligar AT e NT ('o fio da Escritura').",
+        "Referências cruzadas de um versículo, trecho ou capítulo inteiro (votos somados em todo o trecho), com "
+        "prévia do texto: no_outro_testamento, no_mesmo_testamento e caminhos (2º passo: o que as ligações mais fortes "
+        "ligam por sua vez). Use para ligar AT e NT ('o fio da Escritura').",
         _obj({"referencia": _STR}, ["referencia"]),
     ),
     "memoria_listar": ("Lista tudo o que você lembra sobre o usuário (tópicos e conteúdo).", _obj({}, [])),
@@ -126,6 +127,10 @@ def _dump(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, separators=(",", ":"))
 
 
+def _covered(p: ResolvedPassage) -> set[tuple[int, int, int]]:
+    return {(v.book_id, v.chapter, v.verse) for v in p.verses}
+
+
 def _passage_json(p: ResolvedPassage) -> dict[str, Any]:
     return {
         "referencia": p.reference,
@@ -138,6 +143,9 @@ def _passage_json(p: ResolvedPassage) -> dict[str, Any]:
 MAX_WEB_SEARCHES = 8
 DEFINITION_CHARS = 160
 MIN_WEB_SOURCES = 4
+FIRST_NT_BOOK = 40
+CROSSREF_CANDIDATES, CROSSREF_OTHER, CROSSREF_SAME = 20, 10, 6
+CROSSREF_HUBS, CROSSREF_HOPS = 3, 3
 
 
 class ToolExecutor:
@@ -232,17 +240,46 @@ class ToolExecutor:
         ]
         return _dump({"referencia": format_reference(r), "traducoes": items}), None
 
-    async def _t_referencias_cruzadas(self, a: dict[str, Any]) -> tuple[str, str | None]:
-        base = await self._passages.resolve(a["referencia"])
-        r = base.range
-        out = []
-        for ref in await self._repo.cross_references(r.book_id, r.chapter, r.verse_start or 1, 15):
+    async def _linked(
+        self, r: VerseRange, seen: set[tuple[int, int, int]], limit: int
+    ) -> list[tuple[VerseRange, dict[str, Any]]]:
+        """Ligações que não repetem versículo já visto, com prévia do texto (o que chega aqui conta como lido)."""
+        out: list[tuple[VerseRange, dict[str, Any]]] = []
+        for ref in await self._repo.range_cross_references(r, limit * 2 + 10):
             try:
                 preview = await self._passages.resolve(ref.target)
             except InvalidReference:
                 continue
-            out.append({"referencia": preview.reference, "votos": ref.votes, "texto": preview.verses[0].text})
-        return _dump({"referencia": base.reference, "ligadas": out}), None
+            covered = _covered(preview)
+            if covered & seen:
+                continue
+            seen |= covered
+            out.append(
+                (ref.target, {"referencia": preview.reference, "votos": ref.votes, "texto": preview.verses[0].text})
+            )
+            if len(out) == limit:
+                break
+        return out
+
+    async def _t_referencias_cruzadas(self, a: dict[str, Any]) -> tuple[str, str | None]:
+        base = await self._passages.resolve(a["referencia"])
+        seen = _covered(base)
+        linked = await self._linked(base.range, seen, CROSSREF_CANDIDATES)
+        is_ot = base.range.book_id < FIRST_NT_BOOK
+        other = [item for r, item in linked if (r.book_id < FIRST_NT_BOOK) != is_ot]
+        same = [item for r, item in linked if (r.book_id < FIRST_NT_BOOK) == is_ot]
+        paths = []
+        for r, hub in linked[:CROSSREF_HUBS]:
+            if hops := await self._linked(r, seen, CROSSREF_HOPS):
+                paths.append({"via": hub["referencia"], "ligadas": [item for _, item in hops]})
+        return _dump(
+            {
+                "referencia": base.reference,
+                "no_outro_testamento": other[:CROSSREF_OTHER],
+                "no_mesmo_testamento": same[:CROSSREF_SAME],
+                "caminhos": paths,
+            }
+        ), None
 
     async def _t_memoria_listar(self, a: dict[str, Any]) -> tuple[str, str | None]:
         items = await self._memory.list_all()

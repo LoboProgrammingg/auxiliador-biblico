@@ -30,6 +30,16 @@ class ItemResult:
     teologia: int
     nota: int | None
     erro: str | None
+    conexoes: int | None = None
+    clareza: int | None = None
+
+
+@dataclass(frozen=True)
+class JudgeVerdict:
+    nota: int
+    justificativa: str
+    conexoes: int | None
+    clareza: int | None
 
 
 @dataclass(frozen=True)
@@ -67,16 +77,27 @@ def score_events(events: list[ChatEvent]) -> ItemMetrics:
     return m
 
 
-def parse_judge(text: str) -> tuple[int, str] | None:
+def _score(value: Any) -> int | None:
+    try:
+        n = int(value)
+    except (ValueError, TypeError):
+        return None
+    return n if 1 <= n <= 5 else None
+
+
+def parse_judge(text: str) -> JudgeVerdict | None:
+    """Nota geral obrigatória; conexões e clareza são notas extras (fora da faixa viram None)."""
     match = _JSON.search(text)
     if not match:
         return None
     try:
         data = json.loads(match.group(0))
-        nota, justificativa = int(data["nota"]), str(data["justificativa"])
+        nota, justificativa = _score(data["nota"]), str(data["justificativa"])
     except (ValueError, KeyError, TypeError):
         return None
-    return (nota, justificativa) if 1 <= nota <= 5 else None
+    if nota is None:
+        return None
+    return JudgeVerdict(nota, justificativa, _score(data.get("conexoes")), _score(data.get("clareza")))
 
 
 def gate(results: list[ItemResult]) -> GateResult:
@@ -119,6 +140,11 @@ def _failures(r: dict[str, Any]) -> int:
     return r["refs_inventadas"] + r["citacoes_divergentes"] + r["interpretacao_contradiz"] + (1 if r["erro"] else 0)
 
 
+def _mean(rows: list[dict[str, Any]], key: str) -> float | None:
+    values = [r[key] for r in rows if r.get(key) is not None]
+    return round(sum(values) / len(values), 2) if values else None
+
+
 def history_entry(
     results: list[dict[str, Any]], summary: GateResult, esforco: str, categorias: list[str], quando: str
 ) -> dict[str, Any]:
@@ -132,6 +158,8 @@ def history_entry(
         per_category[cat] = {
             "n": len(rows),
             "media": round(sum(notas) / len(notas), 2) if notas else 0.0,
+            "conexoes": _mean(rows, "conexoes"),
+            "clareza": _mean(rows, "clareza"),
             "falhas": sum(_failures(r) for r in rows),
             "segundos": round(sum(r["segundos"] for r in rows) / len(rows), 1),
         }

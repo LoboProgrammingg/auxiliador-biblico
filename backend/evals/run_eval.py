@@ -32,6 +32,7 @@ from app.infrastructure.external.agent_sdk.runner import ClaudeAgentRunner
 from app.infrastructure.external.voyage.client import voyage_from_settings
 from evals.scoring import (
     ItemResult,
+    JudgeVerdict,
     conversations_of,
     gate,
     history_entry,
@@ -53,10 +54,16 @@ deve dizer isso com clareza e honestidade, sem inventar.
 Se a pessoa pediu a opinião do assistente (na sua opinião, o que você acha), a resposta deve dar uma opinião clara, \
 rotulada como dele, bem fundamentada no texto e honesta sobre a visão contrária; fugir da opinião é defeito.
 5. Nada de teologia da prosperidade nem indicação de investimento específico.
-Responda SOMENTE com JSON: {"nota": <1-5>, "justificativa": "<uma frase>"}"""
+Dê também duas notas separadas, de 1 a 5:
+- conexoes: a resposta liga a pergunta a outras passagens, ao original ou ao contexto de um jeito que um leitor comum \
+não veria, e diz por que cada ligação existe? Ligação forçada ou lista solta de referências derruba a nota. Em \
+pergunta que não pede ligação (consolo breve, armadilha, recusa), dê 3 se não houver ligação e ela não fizer falta.
+- clareza: alguém que nunca estudou a Bíblia entende de primeira? A primeira frase responde, os termos técnicos são \
+explicados, há comparação do dia a dia quando o conceito é abstrato, as frases são curtas.
+Responda SOMENTE com JSON: {"nota": <1-5>, "conexoes": <1-5>, "clareza": <1-5>, "justificativa": "<uma frase>"}"""
 
 
-async def judge(item: dict, answer: str, memories: list[tuple[str, str]]) -> tuple[int, str] | None:  # type: ignore[type-arg]
+async def judge(item: dict, answer: str, memories: list[tuple[str, str]]) -> JudgeVerdict | None:  # type: ignore[type-arg]
     settings = get_settings()
     options = ClaudeAgentOptions(
         model=settings.claude_model,
@@ -166,19 +173,22 @@ async def run(items: list[dict], esforco: str | None) -> list[dict]:  # type: ig
                     metrics.citacoes_divergentes,
                     metrics.interpretacao_contradiz,
                     metrics.teologia,
-                    verdict[0] if verdict else None,
+                    verdict.nota if verdict else None,
                     metrics.erro,
+                    verdict.conexoes if verdict else None,
+                    verdict.clareza if verdict else None,
                 )
                 results.append(
                     {
                         **asdict(result),
-                        "justificativa": verdict[1] if verdict else None,
+                        "justificativa": verdict.justificativa if verdict else None,
                         "referencias": metrics.referencias,
                         "segundos": round(time.monotonic() - started, 1),
                     }
                 )
                 print(
-                    f"[{n}/{len(items)}] {item['id']} nota={result.nota} refs_inv={result.refs_inventadas} "
+                    f"[{n}/{len(items)}] {item['id']} nota={result.nota} conexoes={result.conexoes} "
+                    f"clareza={result.clareza} refs_inv={result.refs_inventadas} "
                     f"cit={result.citacoes_divergentes} contradiz={result.interpretacao_contradiz} erro={result.erro}"
                 )
         finally:

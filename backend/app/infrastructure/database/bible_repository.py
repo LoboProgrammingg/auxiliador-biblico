@@ -87,6 +87,24 @@ class SqlBibleRepository(BibleRepository):
             refs.append(CrossReference(VerseRange(tb, tcs, tvs, end), votes))
         return refs
 
+    async def range_cross_references(self, r: VerseRange, limit: int) -> list[CrossReference]:
+        """Ligações de todos os versículos do trecho (capítulo inteiro sem versículo), votos somados por alvo."""
+        start = r.verse_start or 1
+        end = r.verse_end or (r.verse_start if r.verse_start else 10_000)
+        result = await self._session.execute(
+            text(
+                "SELECT to_book, to_chapter_start, to_verse_start, "
+                "MAX(CASE WHEN to_chapter_end = to_chapter_start THEN to_verse_end ELSE to_verse_start END), "
+                "SUM(votes) AS total FROM cross_references "
+                "WHERE from_book = :b AND from_chapter = :c AND from_verse BETWEEN :vs AND :ve "
+                "AND NOT (to_book = :b AND to_chapter_start = :c AND to_verse_start BETWEEN :vs AND :ve) "
+                "GROUP BY to_book, to_chapter_start, to_verse_start HAVING SUM(votes) > 0 "
+                "ORDER BY total DESC, to_book, to_chapter_start, to_verse_start LIMIT :n"
+            ),
+            {"b": r.book_id, "c": r.chapter, "vs": start, "ve": end, "n": limit},
+        )
+        return [CrossReference(VerseRange(tb, tc, tv, te), int(total)) for tb, tc, tv, te, total in result.all()]
+
     async def fulltext(self, query: str, translations: list[str], limit: int) -> list[PassageHit]:
         result = await self._session.execute(
             text(
