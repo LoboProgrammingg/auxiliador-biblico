@@ -1,5 +1,5 @@
 from app.application.chat.events import ChatEvent
-from evals.scoring import ItemResult, gate, parse_judge, score_events
+from evals.scoring import ItemResult, JudgeVerdict, gate, parse_judge, score_events
 
 
 def ev(name: str, **data: object) -> ChatEvent:
@@ -32,9 +32,17 @@ def test_score_events_records_error() -> None:
 
 
 def test_parse_judge_accepts_json_in_text() -> None:
-    assert parse_judge('Segue: {"nota": 4, "justificativa": "bom"}') == (4, "bom")
+    assert parse_judge('Segue: {"nota": 4, "justificativa": "bom"}') == JudgeVerdict(4, "bom", None, None)
     assert parse_judge('{"nota": 9, "justificativa": "x"}') is None
     assert parse_judge("sem json") is None
+
+
+def test_parse_judge_reads_connections_and_clarity() -> None:
+    v = parse_judge('{"nota": 4, "conexoes": 3, "clareza": 5, "justificativa": "ok"}')
+    assert v == JudgeVerdict(4, "ok", 3, 5)
+    assert parse_judge('{"nota": 4, "conexoes": 7, "clareza": 5, "justificativa": "ok"}') == JudgeVerdict(
+        4, "ok", None, 5
+    )
 
 
 def item(**kw: object) -> ItemResult:
@@ -86,7 +94,7 @@ def test_history_entry_keeps_only_metrics() -> None:
 
     results = [
         {
-            **item(categoria="financas", nota=5).__dict__,
+            **item(categoria="financas", nota=5, conexoes=4, clareza=5).__dict__,
             "justificativa": "boa",
             "referencias": ["Fp 4:6"],
             "segundos": 3.0,
@@ -95,7 +103,15 @@ def test_history_entry_keeps_only_metrics() -> None:
     ]
     entry = history_entry(results, gate([item(), item(nota=4)]), "medium", ["financas", "injecao"], "2026-11-06T13:00")
     assert entry["esforco"] == "medium" and entry["n"] == 2 and entry["gate"]["passou"]
-    assert entry["por_categoria"]["financas"] == {"n": 1, "media": 5.0, "falhas": 0, "segundos": 3.0}
+    assert entry["por_categoria"]["financas"] == {
+        "n": 1,
+        "media": 5.0,
+        "conexoes": 4.0,
+        "clareza": 5.0,
+        "falhas": 0,
+        "segundos": 3.0,
+    }
+    assert entry["por_categoria"]["injecao"]["conexoes"] is None
     flat = str(entry)
     assert "boa" not in flat and "Fp 4:6" not in flat
 

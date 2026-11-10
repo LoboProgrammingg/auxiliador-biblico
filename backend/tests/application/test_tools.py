@@ -155,6 +155,47 @@ async def test_parallel_tool_calls_share_session_safely(executor: ToolExecutor) 
     assert not any(o.is_error for o in outcomes), [o.content for o in outcomes if o.is_error]
 
 
+async def test_cross_references_cover_range_split_by_testament_with_paths(
+    bible_db: AsyncSession, executor: ToolExecutor
+) -> None:
+    rows = [
+        (50, 1, 1, 1, 1, 1, 30),  # Fp 1:1 -> Gn 1:1
+        (50, 1, 2, 43, 1, 1, 25),  # Fp 1:2 -> Jo 1:1
+        (50, 1, 1, 19, 2, 1, 20),  # -> Sl 2:1
+        (50, 1, 2, 45, 1, 1, 5),  # -> Rm 1:1
+        (1, 1, 1, 43, 1, 1, 40),  # 2º passo repetido: fora
+        (1, 1, 1, 50, 1, 1, 40),  # volta à origem: fora
+        (1, 1, 1, 23, 1, 1, 10),  # Gn 1:1 -> Is 1:1
+        (43, 1, 1, 66, 1, 1, 7),  # Jo 1:1 -> Ap 1:1
+    ]
+    for fb, fc, fv, tb, tc, tv, votes in rows:
+        await bible_db.execute(
+            text(
+                "INSERT INTO cross_references (from_book, from_chapter, from_verse, to_book, to_chapter_start, "
+                "to_verse_start, to_chapter_end, to_verse_end, votes) VALUES (:fb, :fc, :fv, :tb, :tc, :tv, :tc, :tv, :n)"
+            ),
+            {"fb": fb, "fc": fc, "fv": fv, "tb": tb, "tc": tc, "tv": tv, "n": votes},
+        )
+    for fb, fc, fv, tb, tc, tv, te, votes in ((1, 1, 1, 43, 1, 1, 2, 35), (1, 1, 1, 50, 1, 2, 3, 35)):
+        await bible_db.execute(
+            text(
+                "INSERT INTO cross_references (from_book, from_chapter, from_verse, to_book, to_chapter_start, "
+                "to_verse_start, to_chapter_end, to_verse_end, votes) VALUES (:fb, :fc, :fv, :tb, :tc, :tv, :tc, :te, :n)"
+            ),
+            {"fb": fb, "fc": fc, "fv": fv, "tb": tb, "tc": tc, "tv": tv, "te": te, "n": votes},
+        )  # Jo 1:1-2 e Fp 1:2-3 cobrem versículos já vistos: fora
+    data = json.loads((await executor.run("referencias_cruzadas", {"referencia": "Fp 1:1-2"})).content)
+    refs = lambda items: [i["referencia"] for i in items]  # noqa: E731
+    assert refs(data["no_outro_testamento"]) == ["Gn 1:1", "Sl 2:1"]
+    assert refs(data["no_mesmo_testamento"]) == ["Jo 1:1", "Rm 1:1"]
+    assert data["no_outro_testamento"][0]["texto"] == "Texto sintético Gn 1:1"
+    assert [(c["via"], refs(c["ligadas"])) for c in data["caminhos"]] == [
+        ("Gn 1:1", ["Is 1:1"]),
+        ("Jo 1:1", ["Ap 1:1"]),
+    ]
+    assert data["caminhos"][0]["ligadas"][0]["texto"] == "Texto sintético Is 1:1"
+
+
 class NumberedWeb:
     def __init__(self) -> None:
         self.calls = 0

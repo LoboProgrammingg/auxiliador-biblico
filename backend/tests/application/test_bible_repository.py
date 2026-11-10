@@ -62,3 +62,36 @@ async def test_cross_references_ordered_by_votes(bible_db: AsyncSession) -> None
     )
     refs = await SqlBibleRepository(bible_db).cross_references(50, 2, 3, 10)
     assert [r.target for r in refs] == [VerseRange(60, 2, 1, 1), VerseRange(40, 1, 1, 2)]
+
+
+async def _crossrefs(db: AsyncSession, rows: list[tuple[int, int, int, int, int, int, int]]) -> None:
+    for fb, fc, fv, tb, tc, tv, votes in rows:
+        await db.execute(
+            text(
+                "INSERT INTO cross_references (from_book, from_chapter, from_verse, to_book, to_chapter_start, "
+                "to_verse_start, to_chapter_end, to_verse_end, votes) VALUES (:fb, :fc, :fv, :tb, :tc, :tv, :tc, :tv, :n)"
+            ),
+            {"fb": fb, "fc": fc, "fv": fv, "tb": tb, "tc": tc, "tv": tv, "n": votes},
+        )
+
+
+async def test_range_cross_references_sums_votes_over_the_whole_range(bible_db: AsyncSession) -> None:
+    await _crossrefs(
+        bible_db,
+        [
+            (43, 1, 1, 1, 1, 1, 10),
+            (43, 1, 2, 1, 1, 1, 15),  # mesmo alvo por outro versículo do trecho: soma 25
+            (43, 1, 1, 19, 2, 1, 20),
+            (43, 1, 3, 43, 1, 2, 50),  # alvo dentro do próprio trecho: fora
+            (43, 1, 1, 23, 1, 1, -3),  # votos negativos: fora
+            (43, 1, 1, 66, 1, 1, 5),
+            (43, 2, 1, 40, 1, 1, 99),  # outro capítulo: fora
+        ],
+    )
+    repo = SqlBibleRepository(bible_db)
+    expected = [(VerseRange(1, 1, 1, 1), 25), (VerseRange(19, 2, 1, 1), 20), (VerseRange(66, 1, 1, 1), 5)]
+    got = await repo.range_cross_references(VerseRange(43, 1, 1, 3), 10)
+    assert [(r.target, r.votes) for r in got] == expected
+    whole = await repo.range_cross_references(VerseRange(43, 1, None, None), 10)
+    assert [(r.target, r.votes) for r in whole] == expected
+    assert len(await repo.range_cross_references(VerseRange(43, 1, 1, 3), 2)) == 2
